@@ -33,6 +33,21 @@ let myId: string | undefined
 // Отметка «чат запущен» для строки меню: спящему чату просьбу надо вставить руками.
 const BEAT_MS = 60000
 let lastBeat = 0
+// Состояние для раздела «Ждут вас»: работает, ждёт решения человека, закончил ход.
+type Status = 'working' | 'asking' | 'done' | 'none'
+let status: { state: Status; at: number } | undefined
+
+async function setStatus($: EngineInterface, state: Status) {
+  status = { state, at: await $.clock.now() }
+  await writeStatus($)
+}
+
+async function writeStatus($: EngineInterface) {
+  if (myId === undefined || status === undefined) {
+    return  // адрес чата ещё не известен — запишем сразу, как узнаем
+  }
+  await $.fs.write(`${dataDir($)}/status/${myId}.json`, JSON.stringify(status)).catch(() => undefined)
+}
 
 // Пишет файл чата; false — приложение пока недоступно, стоит повторить позже.
 async function record($: EngineInterface, fill: Fill): Promise<boolean> {
@@ -47,6 +62,7 @@ async function record($: EngineInterface, fill: Fill): Promise<boolean> {
     }
     const session = JSON.parse(textOf(got))
     myId = session.sessionId
+    void writeStatus($)
     const title: string = session.title ?? ''
     const clean = title.replace(OLD_PREFIX, '')
     if (clean !== title && clean !== '') {
@@ -157,6 +173,50 @@ export const register: Register = on => {
   })
     // Ошибка здесь не должна мешать чату стартовать.
     .catch(($, e, next) => next(e))
+
+  // Ход главного чата начался или закончился (ходы субагентов не в счёт).
+  on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await setStatus($, 'working')
+    }
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await setStatus($, 'done')
+    }
+    return next(e)
+  })
+
+  // Чат показал запрос разрешения или форму от MCP — стоит, пока человек не ответит.
+  on('classic.Notification', async ($, e, next) => {
+    if (e.notification_type === 'permission_prompt' || e.notification_type === 'elicitation_dialog') {
+      await setStatus($, 'asking')
+    }
+    return next(e)
+  })
+    .catch(($, e, next) => next(e))  // сбой здесь не должен мешать уведомлению
+
+  // Вопрос человеку — тоже ожидание; ответили или разрешили инструмент — чат снова работает.
+  on('tool.call', async ($, e, next) => {
+    if (e.tool === 'AskUserQuestion') {
+      await setStatus($, 'asking')
+    }
+    const ran = await next(e)
+    if (status?.state === 'asking') {
+      await setStatus($, 'working')
+    }
+    return ran
+  })
+    .catch(($, e, next) => next(e))  // сбой подсчёта не должен мешать инструменту
+
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      await setStatus($, 'none')
+    }
+    return next(e)
+  })
 
   on('session.measure', async ($, e, next) => {
     if (e.changed.includes('rateLimits')) {

@@ -129,6 +129,22 @@ func bar(_ percent: Double) -> String {
   return String(repeating: "▰", count: filled) + String(repeating: "▱", count: 10 - filled)
 }
 
+// «Ждут вас»: ✋ — чат стоит, пока вы не дадите разрешение или не ответите на вопрос;
+// 💬 — чат закончил ход в последний час, а вы ему ещё не написали. Пишет мод: status/<адрес>.json.
+enum Waiting { case asking, ready }
+
+let statusDir = dataDir.appendingPathComponent("status")
+
+func waiting(_ chat: Chat) -> Waiting? {
+  guard let data = try? Data(contentsOf: statusDir.appendingPathComponent("\(chat.id).json")),
+        let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        let state = object["state"] as? String, let at = object["at"] as? Double else { return nil }
+  let age = Date().timeIntervalSince1970 - at / 1000
+  if state == "asking" && age < 12 * 3600 { return .asking }  // старше — процесс чата, видимо, закрыт
+  if state == "done" && age < 3600 { return .ready }
+  return nil
+}
+
 func loadChats() -> [Chat] {
   let files = (try? FileManager.default.contentsOfDirectory(at: dataDir, includingPropertiesForKeys: nil)) ?? []
   return files
@@ -311,6 +327,10 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
       title.append(NSAttributedString(string: "\(top.percent)%"))
       let red = active.filter { $0.percent >= 80 }.count
       if red > 1 { title.append(NSAttributedString(string: " ·\(red)")) }
+      let asking = loadChats().filter { waiting($0) == .asking }.count
+      if asking > 0 {
+        title.append(NSAttributedString(string: " ✋\(asking)", attributes: [.foregroundColor: NSColor.systemOrange]))
+      }
     } else {
       title.append(NSAttributedString(string: "◌ ctx"))
     }
@@ -334,6 +354,18 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let limits = loadLimits()
     for limit in limits { menu.addItem(limitRow(limit)) }
     if !limits.isEmpty { menu.addItem(.separator()) }
+
+    // Сначала те, кто ждёт решения, потом — у кого готов ответ, свежие выше.
+    let asking = chats.filter { waiting($0) == .asking }
+    let ready = chats.filter { waiting($0) == .ready }
+    let waitingChats: [Chat] = (asking + ready.sorted { $0.updatedAt > $1.updatedAt })
+    if !waitingChats.isEmpty {
+      let header = NSMenuItem(title: "Ждут вас", action: nil, keyEquivalent: "")
+      header.isEnabled = false
+      menu.addItem(header)
+      for chat in waitingChats { menu.addItem(row(chat)) }
+      menu.addItem(.separator())
+    }
 
     if chats.isEmpty {
       menu.addItem(NSMenuItem(title: "Пока нет данных — ответ в любом чате их создаст", action: nil, keyEquivalent: ""))
@@ -382,6 +414,11 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   // Строка чата: клик по тексту открывает чат, 🧹 просит его подготовиться к очистке.
   func row(_ chat: Chat) -> NSMenuItem {
     let text = NSMutableAttributedString()
+    switch waiting(chat) {
+    case .asking: text.append(NSAttributedString(string: "✋ "))
+    case .ready: text.append(NSAttributedString(string: "💬 "))
+    case nil: break
+    }
     text.append(dot(chat.percent, size: 14))
     text.append(NSAttributedString(string: String(format: "%3d%%  ", chat.percent), attributes: [
       .font: NSFont.monospacedDigitSystemFont(ofSize: 14, weight: .semibold),
