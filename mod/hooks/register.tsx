@@ -1,10 +1,13 @@
 import type { Register, EngineInterface, SessionRateLimit } from 'claude-code'
 
 // Сюда каждый чат пишет своё заполнение контекста; строка меню (ContextMeter.app) читает папку:
-// ~/.claude/context-meter. Домашняя папка — из пути, где лежит мод (/Users/<имя>/… или /home/<имя>/…).
+// ~/.claude/context-meter. Домашняя папка — из пути, где лежит мод: всё до /.claude/
+// (~/.claude/mods/…), а если мод подключён прямо из клона — /Users/<имя> или /home/<имя>.
 function dataDir($: EngineInterface) {
-  const home = /^(\/(?:Users|home)\/[^/]+)\//.exec($.plugin.root)
-  return `${home ? home[1] : ''}/.claude/context-meter`
+  const root = $.plugin.root
+  const inClaude = root.indexOf('/.claude/')
+  const home = inClaude > 0 ? root.slice(0, inClaude) : (/^(\/(?:Users|home)\/[^/]+)\//.exec(root)?.[1] ?? '')
+  return `${home}/.claude/context-meter`
 }
 // Метка, которую ставила прежняя версия мода: найдём — уберём из названия.
 const OLD_PREFIX = /^(?:🟢|🟡|🟠|🔴|⚪) \d{1,3}% · /u

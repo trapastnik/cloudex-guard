@@ -199,7 +199,7 @@ struct Guarded: Codable, Hashable {
 
 enum Health { case ok, bad, unknown }
 
-final class NetGuard {
+final class NetGuard: @unchecked Sendable {  // состояние трогается только на главном потоке
   static let shared = NetGuard()
 
   // Настройки
