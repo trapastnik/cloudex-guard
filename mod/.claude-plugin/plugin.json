@@ -1,0 +1,10 @@
+{
+  "name": "context-meter",
+  "version": "0.4.0",
+  "description": "Writes each chat's context window fill to ~/.claude/context-meter for the ContextMeter menu bar app",
+  "license": "MIT",
+  "author": {
+    "name": "trapastnik"
+  },
+  "repository": "https://github.com/trapastnik/context-meter"
+}
