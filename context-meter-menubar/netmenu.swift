@@ -67,6 +67,9 @@ extension App {
     menu.addItem(protection)
     menu.addItem(action("Проверить адрес сейчас", #selector(checkNow)))
     menu.addItem(action("Как нас видят…", #selector(showLeaks)))
+    let speed = action(SpeedTest.shared.summary, #selector(runSpeed))
+    speed.isEnabled = !SpeedTest.shared.isRunning
+    menu.addItem(speed)
     menu.addItem(.separator())
   }
 
@@ -178,4 +181,5 @@ extension App {
   @objc func unpause() { NetGuard.shared.pausedUntil = nil }
   @objc func checkNow() { NetGuard.shared.check() }
   @objc func showLeaks() { LeakWindow.show() }
+  @objc func runSpeed() { SpeedTest.shared.run() }
 }

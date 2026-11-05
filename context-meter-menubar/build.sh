@@ -18,7 +18,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 # Собираем рядом и подменяем файл целиком: перезапись на месте ломает подпись,
 # и macOS убивает приложение при запуске (Code Signature Invalid).
-swiftc -O main.swift guard.swift leaks.swift netmenu.swift -o "$APP/Contents/MacOS/ContextMeter.new"
+swiftc -O *.swift -o "$APP/Contents/MacOS/ContextMeter.new"
 mv -f "$APP/Contents/MacOS/ContextMeter.new" "$APP/Contents/MacOS/ContextMeter"
 codesign --force --sign - "$APP"
 pkill -x ContextMeter || true

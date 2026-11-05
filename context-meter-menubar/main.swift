@@ -427,6 +427,17 @@ if UserDefaults.standard.object(forKey: positionKey) == nil {
   UserDefaults.standard.set(260.0, forKey: positionKey)
 }
 
+// Служебная проверка из терминала: ContextMeter --speedtest
+if CommandLine.arguments.contains("--speedtest") {
+  SpeedTest.shared.onChange = {
+    guard !SpeedTest.shared.isRunning else { return }
+    print(SpeedTest.shared.summary)
+    exit(0)
+  }
+  SpeedTest.shared.run()
+  RunLoop.main.run()
+}
+
 let app = NSApplication.shared
 let delegate = App()
 app.delegate = delegate
