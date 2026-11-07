@@ -39,6 +39,16 @@ The interface follows your system language: English or Russian.
 
 You need macOS 13 or later and the Claude desktop app. Claudex has two parts: a **mod** that runs inside each Claude Code chat and reports its numbers, and the **menu bar app** that shows them.
 
+### One command (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh
+```
+
+It downloads the latest release, checks its SHA-256, installs the app into `~/Applications` and the mod into `~/.claude/mods/claudex`, asks before adding the mod to `~/.claude/settings.json` (keeping a backup), and starts Claudex at login. Then restart the Claude app. Nothing to build; Apple Silicon and Intel. [Read the script](install.sh) before running it if you like. To remove everything: `curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh -s uninstall`.
+
+### From source
+
 **1. Get the code and install the mod**
 
 ```bash
@@ -86,6 +96,8 @@ Local data lives in `~/.claude/claudex`; old files are cleaned up automatically.
 - **A chat doesn't appear.** It shows up after its next reply; chats that haven't run since the Claude restart are asleep.
 
 ## Uninstall
+
+If you used the one-command install: `curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh -s uninstall`. Otherwise:
 
 ```bash
 ./app/autostart.sh off

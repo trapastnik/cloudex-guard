@@ -26,6 +26,8 @@ done
 lipo -create "$DIST/Claudex-arm64" "$DIST/Claudex-x86_64" -output "$APP/Contents/MacOS/Claudex"
 rm "$DIST/Claudex-arm64" "$DIST/Claudex-x86_64"
 codesign --force --sign - "$APP"
-(cd "$DIST" && ditto -c -k --keepParent Claudex.app Claudex-macos.zip && shasum -a 256 Claudex-macos.zip > SHA256SUMS.txt)
+# Мод отдельным архивом — для install.sh (без служебных типов, которые движок пишет сам).
+(cd ../mod && zip -qr -X "$OLDPWD/$DIST/claudex-mod.zip" .claude-plugin/plugin.json hooks)
+(cd "$DIST" && ditto -c -k --keepParent Claudex.app Claudex-macos.zip && shasum -a 256 Claudex-macos.zip claudex-mod.zip > SHA256SUMS.txt)
 lipo -info "$APP/Contents/MacOS/Claudex"
 cat "$DIST/SHA256SUMS.txt"

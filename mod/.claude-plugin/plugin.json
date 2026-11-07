@@ -1,6 +1,6 @@
 {
   "name": "claudex",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Claudex: writes each Claude Code chat's context fill, plan limits and status to ~/.claude/claudex for the Claudex menu bar app",
   "license": "MIT",
   "author": {

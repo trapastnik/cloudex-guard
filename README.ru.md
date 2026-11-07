@@ -39,6 +39,16 @@
 
 Нужны macOS 13 или новее и десктопное приложение Claude. У Claudex две части: **мод**, который работает внутри каждого чата Claude Code и сообщает его цифры, и **приложение для строки меню**, которое их показывает.
 
+### Одной командой (рекомендуется)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh
+```
+
+Скрипт скачает последний релиз, сверит SHA-256, поставит приложение в `~/Applications` и мод в `~/.claude/mods/claudex`, спросит, прежде чем добавить мод в `~/.claude/settings.json` (сохранив копию), и включит запуск при входе в систему. Затем перезапустите Claude. Ничего собирать не нужно; Apple Silicon и Intel. [Скрипт можно прочитать](install.sh) перед запуском. Удалить всё: `curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh -s uninstall`.
+
+### Из исходников
+
 **1. Код и мод**
 
 ```bash
@@ -86,6 +96,8 @@ cd claudex
 - **Чата нет в списке.** Он появится после своего следующего ответа; чаты, которые не запускались после перезапуска Claude, спят.
 
 ## Удаление
+
+Если ставили одной командой: `curl -fsSL https://raw.githubusercontent.com/trapastnik/claudex/main/install.sh | sh -s uninstall`. Иначе:
 
 ```bash
 ./app/autostart.sh off
