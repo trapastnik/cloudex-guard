@@ -3,7 +3,7 @@
 # Агент вызывает /usr/bin/open, как двойной клик: прямой запуск самоподписанного файла
 # агентом macOS блокирует после каждой пересборки (Launch Constraint Violation).
 set -e
-LABEL=ru.dvn.context-meter
+LABEL=io.github.trapastnik.context-meter
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 if [ "${1:-on}" = "off" ]; then
@@ -25,6 +25,9 @@ cat > "$PLIST" <<PLIST
     <string>$HOME/Applications/ContextMeter.app</string>
   </array>
   <key>RunAtLoad</key><true/>
+  <!-- Раз в минуту: запущенному ContextMeter open ничего не делает, упавший — поднимает,
+       и он сразу отпускает программы, которые заморозил до сбоя. -->
+  <key>StartInterval</key><integer>60</integer>
 </dict>
 </plist>
 PLIST

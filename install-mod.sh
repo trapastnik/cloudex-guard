@@ -4,6 +4,12 @@
 set -e
 cd "$(dirname "$0")"
 DEST="$HOME/.claude/mods/context-meter"
+# Клон, лежащий прямо в папке мода, rsync --delete стёр бы целиком — отказываемся.
+HERE="$(pwd -P)"
+if [ "$HERE" = "$DEST" ] || [ "${HERE#$DEST/}" != "$HERE" ] || [ "${DEST#$HERE/}" = "mod" ]; then
+  echo "Склонируйте репозиторий в другую папку (не в $DEST) и запустите скрипт оттуда." >&2
+  exit 1
+fi
 mkdir -p "$DEST"
 rsync -a --delete --exclude '.claude-plugin/types' mod/ "$DEST/"
 echo "Мод скопирован в $DEST"

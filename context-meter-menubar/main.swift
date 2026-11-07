@@ -39,6 +39,11 @@ struct Chat: Decodable {
   }
 }
 
+// Процент из чужого файла: NaN или огромное число не должны ронять приложение.
+func whole(_ value: Double) -> Int {
+  value.isFinite ? Int(min(max(value, 0), 1000).rounded()) : 0
+}
+
 func color(_ percent: Int) -> NSColor {
   switch percent {
   case ..<40: return .systemGreen
@@ -125,7 +130,7 @@ func until(_ date: Date?) -> String {
 
 // Полоска из 10 делений: «▰▰▰▱▱▱▱▱▱▱».
 func bar(_ percent: Double) -> String {
-  let filled = min(10, max(0, Int((percent / 10).rounded())))
+  let filled = min(10, whole(percent / 10))
   return String(repeating: "▰", count: filled) + String(repeating: "▱", count: 10 - filled)
 }
 
@@ -140,7 +145,7 @@ func waiting(_ chat: Chat) -> Waiting? {
         let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
         let state = object["state"] as? String, let at = object["at"] as? Double else { return nil }
   let age = Date().timeIntervalSince1970 - at / 1000
-  if state == "asking" && age < 12 * 3600 { return .asking }  // старше — процесс чата, видимо, закрыт
+  if state == "asking" && age < 12 * 3600 && isAlive(chat.id) { return .asking }  // закрытый чат ничего не ждёт
   if state == "done" && age < 3600 { return .ready }
   return nil
 }
@@ -238,7 +243,7 @@ final class RowView: NSView {
     DispatchQueue.main.async {
       let isAwake = isAlive(chat.id)
       if isPending {
-        if !isAwake { RowView.pasteIntoSleeping(chat) }
+        if isAwake { RowView.open(chat) } else { RowView.pasteIntoSleeping(chat) }
         return
       }
       NSApp.activate(ignoringOtherApps: true)
@@ -257,7 +262,7 @@ final class RowView: NSView {
         return
       }
       try? FileManager.default.createDirectory(at: requestsDir, withIntermediateDirectories: true)
-      let body = ["createdAt": Date().timeIntervalSince1970 * 1000]
+      let body = ["createdAt": Int(Date().timeIntervalSince1970 * 1000)]
       if let data = try? JSONSerialization.data(withJSONObject: body) {
         try? data.write(to: requestsDir.appendingPathComponent("\(chat.id).json"))
       }
@@ -283,20 +288,24 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let timer = Timer(timeInterval: fallbackSeconds, repeats: true) { [weak self] _ in self?.refresh() }
     timer.tolerance = fallbackSeconds / 2
     RunLoop.main.add(timer, forMode: .common)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.reportPlacement() }
+    pruneOldFiles()
   }
 
-  // Пишет, где macOS поставила значок и видим ли он: при нехватке места в строке меню
-  // (вырез экрана) система прячет значки, и процесс жив, а значка нет.
-  func reportPlacement() {
-    let window = item.button?.window
-    let frame = window.map { NSStringFromRect($0.frame) } ?? "нет окна"
-    let isVisible = window.map { $0.occlusionState.contains(.visible) } ?? false
-    let screen = NSScreen.main.map { NSStringFromRect($0.frame) } ?? "?"
-    let notch = NSScreen.main?.auxiliaryTopLeftArea.map { NSStringFromRect($0) } ?? "нет"
-    let line = "\(Date()) значок \(frame) виден=\(isVisible) экран \(screen) слева от выреза \(notch)\n"
-    let log = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/context-meter-placement.log")
-    try? line.write(to: log, atomically: true, encoding: .utf8)
+  // Выход через меню приложений, выход из системы, quit от другой программы — отпускаем замороженных.
+  func applicationWillTerminate(_ note: Notification) {
+    NetGuard.shared.releaseAll()
+  }
+
+  // Старые служебные файлы: просьбы 🧹 старше суток, отметки и состояния чатов, молчащих больше 30 дней.
+  func pruneOldFiles() {
+    let now = Date()
+    for (folder, days) in [(requestsDir, 1.0), (aliveDir, 30.0), (statusDir, 30.0)] {
+      let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+      for file in files {
+        let changed = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? now
+        if now.timeIntervalSince(changed) > days * 86400 { try? FileManager.default.removeItem(at: file) }
+      }
+    }
   }
 
   // Ждёт событий папки данных без опроса (FSEvents, с изменениями файлов на месте);
@@ -336,8 +345,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     // Лимит в строке меню — только когда он близок к концу.
     if let hot = loadLimits().filter({ $0.percentUsed >= 80 }).max(by: { $0.percentUsed < $1.percentUsed }) {
-      title.append(NSAttributedString(string: " \(hot.tag)\(Int(hot.percentUsed))", attributes: [
-        .foregroundColor: color(Int(hot.percentUsed)),
+      title.append(NSAttributedString(string: " \(hot.tag)\(whole(hot.percentUsed))", attributes: [
+        .foregroundColor: color(whole(hot.percentUsed)),
       ]))
     }
     item.button?.attributedTitle = title
@@ -397,7 +406,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   // «5 ч      ▰▱▱▱▱▱▱▱▱▱   5%  2 ч 58 мин»
   func limitRow(_ limit: Limit) -> NSMenuItem {
     let mono = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-    let percent = Int(limit.percentUsed.rounded())
+    let percent = whole(limit.percentUsed)
     let text = NSMutableAttributedString()
     text.append(NSAttributedString(string: limit.name.padding(toLength: 10, withPad: " ", startingAt: 0), attributes: [.font: mono]))
     text.append(NSAttributedString(string: bar(limit.percentUsed), attributes: [.font: mono, .foregroundColor: color(percent)]))
@@ -442,7 +451,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
           let createdAt = (try? JSONSerialization.jsonObject(with: data) as? [String: Double])?["createdAt"]
     else { return false }
     let done = (try? String(contentsOf: ack, encoding: .utf8)).flatMap { Double($0) } ?? 0
-    return createdAt > done
+    let age = Date().timeIntervalSince1970 - createdAt / 1000
+    return createdAt > done && age < 600  // мод не выполняет просьбы старше 10 минут
   }
 
   @objc func openDir() {

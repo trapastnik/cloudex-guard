@@ -45,7 +45,10 @@ extension App {
     if let claude = guardian.views["claude.ai"], let general = guardian.general, general.country != claude.country {
       notes.append("сервисы IP видят \(flag(general.country)) \(general.country) — VPN ведёт трафик разными путями")
     }
-    if let disagreement = guardian.disagreement { notes.append("второй сервис назвал другой адрес: \(disagreement)") }
+    if let other = guardian.other { notes.append("второй сервис видит другой адрес: \(flag(other.country)) \(other.country) \(other.ip)") }
+    if let bypass = guardian.bypass, bypass.country != guardian.shownCountry {
+      notes.append("мимо прокси (терминал, Claude Code): \(flag(bypass.country)) \(bypass.country) \(bypass.ip)")
+    }
     if let v6 = guardian.v6 { notes.append("IPv6: \(flag(v6.country)) \(v6.country) \(v6.ip)") }
     for note in notes {
       menu.addItem(info(NSAttributedString(string: "   " + note, attributes: [.foregroundColor: gray, .font: NSFont.menuFont(ofSize: 12)])))
@@ -163,9 +166,17 @@ extension App {
     panel.prompt = "Защищать"
     NSApp.activate(ignoringOtherApps: true)
     guard panel.runModal() == .OK, let url = panel.url else { return }
+    if let reason = Guarded.refusal(for: url) {
+      let alert = NSAlert()
+      alert.messageText = "Эту программу защищать нельзя"
+      alert.informativeText = reason + " Замороженная, она может повесить Мак или не дать VPN переподключиться — тогда программы не оттают."
+      alert.runModal()
+      return
+    }
     let name = FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    let bundleID = Bundle(url: url)?.bundleIdentifier
     var list = NetGuard.shared.guarded
-    if !list.contains(where: { $0.path == url.path }) { list.append(Guarded(name: name, path: url.path, probe: nil)) }
+    if !list.contains(where: { $0.path == url.path }) { list.append(Guarded(name: name, path: url.path, probe: nil, bundleID: bundleID)) }
     NetGuard.shared.guarded = list
   }
 

@@ -13,8 +13,10 @@ enum Net {
   // маршруте и после переключения VPN показывает прежний адрес.
   static func session(direct: Bool = false) -> URLSession {
     let config = URLSessionConfiguration.ephemeral
-    config.timeoutIntervalForRequest = 6
-    config.timeoutIntervalForResource = 8
+    // Короткие таймауты: один зависший сервис не должен растягивать проверку,
+    // от её скорости зависит, как быстро оттают программы.
+    config.timeoutIntervalForRequest = 4
+    config.timeoutIntervalForResource = 5
     config.requestCachePolicy = .reloadIgnoringLocalCacheData
     config.httpMaximumConnectionsPerHost = 1
     if direct {
@@ -111,28 +113,39 @@ struct Proc: Hashable {
   let start: Int64  // время старта — чтобы не отправить сигнал чужому процессу с тем же номером
 }
 
+struct ProcInfo {
+  let proc: Proc
+  let ppid: Int32
+  let path: String
+  let isStopped: Bool  // уже остановлен кем-то другим (Ctrl-Z в терминале) — не трогаем
+}
+
 enum Procs {
-  // Все процессы: номер, родитель, время старта, путь к исполняемому файлу.
-  static func list() -> [(proc: Proc, ppid: Int32, path: String)] {
+  // Все процессы; nil — не удалось прочитать список (тогда ничего не меняем).
+  static func list() -> [ProcInfo]? {
     var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
-    var size = 0
-    guard sysctl(&mib, 4, nil, &size, nil, 0) == 0 else { return [] }
     let stride = MemoryLayout<kinfo_proc>.stride
-    var items = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 32)
-    size = items.count * stride
-    guard sysctl(&mib, 4, &items, &size, nil, 0) == 0 else { return [] }
-    var out: [(proc: Proc, ppid: Int32, path: String)] = []
-    var buffer = [CChar](repeating: 0, count: 4096)
-    for item in items.prefix(size / stride) {
-      let pid = item.kp_proc.p_pid
-      guard pid > 0 else { continue }
-      let started = item.kp_proc.p_un.__p_starttime
-      let start = Int64(started.tv_sec) * 1_000_000 + Int64(started.tv_usec)
-      let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
-      let path = length > 0 ? String(cString: buffer) : ""
-      out.append((Proc(pid: pid, start: start), item.kp_eproc.e_ppid, path))
+    for _ in 0..<3 {  // процессов может стать больше между двумя вызовами — повторяем с запасом
+      var size = 0
+      guard sysctl(&mib, 4, nil, &size, nil, 0) == 0 else { return nil }
+      var items = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 256)
+      size = items.count * stride
+      guard sysctl(&mib, 4, &items, &size, nil, 0) == 0 else { continue }
+      var out: [ProcInfo] = []
+      var buffer = [CChar](repeating: 0, count: 4096)
+      for item in items.prefix(size / stride) {
+        let pid = item.kp_proc.p_pid
+        guard pid > 0 else { continue }
+        let started = item.kp_proc.p_un.__p_starttime
+        let start = Int64(started.tv_sec) * 1_000_000 + Int64(started.tv_usec)
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        let path = length > 0 ? String(cString: buffer) : ""
+        out.append(ProcInfo(proc: Proc(pid: pid, start: start), ppid: item.kp_eproc.e_ppid,
+                            path: path, isStopped: Int32(item.kp_proc.p_stat) == SSTOP))
+      }
+      return out.isEmpty ? nil : out
     }
-    return out
+    return nil
   }
 
   static func startOf(_ pid: Int32) -> Int64? {
@@ -150,22 +163,31 @@ enum Procs {
     kill(proc.pid, signal)
   }
 
-  // Процессы программы из бандла и всё, что они запустили (у Claude это и Claude Code, и MCP).
-  static func tree(of bundlePaths: [String], in all: [(proc: Proc, ppid: Int32, path: String)]) -> Set<Proc> {
+  // Процессы программы и всё, что они запустили (у Claude это и Claude Code, и MCP).
+  // Программа находится и по пути внутри бандла, и по идентификатору среди запущенных —
+  // так ловится и копия из «Загрузок», и запуск через ссылку.
+  static func tree(of app: Guarded, in all: [ProcInfo]) -> [ProcInfo] {
     let me = getpid()
-    var picked = Set<Int32>()
-    for item in all where item.proc.pid != me {
-      if bundlePaths.contains(where: { item.path.hasPrefix($0 + "/") }) { picked.insert(item.proc.pid) }
+    var roots = Set<Int32>()
+    let byPID = Dictionary(all.map { ($0.proc.pid, $0) }, uniquingKeysWith: { first, _ in first })
+    for item in all where item.path.hasPrefix(app.path + "/") { roots.insert(item.proc.pid) }
+    if let bundleID = app.bundleID ?? Bundle(path: app.path)?.bundleIdentifier {
+      for running in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID) {
+        roots.insert(running.processIdentifier)
+      }
     }
+    // Сами программы — никогда не системные; а всё, что они запустили (git, curl, MCP), замораживается.
+    roots = roots.filter { byPID[$0].map { !Guarded.isSystem($0.path) } ?? false }
+    var picked = roots
     var grew = true
     while grew {
       grew = false
-      for item in all where !picked.contains(item.proc.pid) && picked.contains(item.ppid) && item.proc.pid != me {
+      for item in all where !picked.contains(item.proc.pid) && picked.contains(item.ppid) {
         picked.insert(item.proc.pid)
         grew = true
       }
     }
-    return Set(all.filter { picked.contains($0.proc.pid) }.map(\.proc))
+    return all.filter { picked.contains($0.proc.pid) && $0.proc.pid != me && $0.proc.pid > 1 }
   }
 }
 
@@ -175,6 +197,7 @@ struct Guarded: Codable, Hashable {
   let name: String
   let path: String       // путь к .app
   let probe: String?     // сайт, у которого спрашивать, каким адресом видна программа
+  var bundleID: String? = nil
 
   // Известные программы: ищутся среди установленных по идентификатору.
   static let known: [(name: String, bundleID: String, probe: String?)] = [
@@ -190,8 +213,37 @@ struct Guarded: Codable, Hashable {
   static func installed() -> [Guarded] {
     known.compactMap { item in
       NSWorkspace.shared.urlForApplication(withBundleIdentifier: item.bundleID)
-        .map { Guarded(name: item.name, path: $0.path, probe: item.probe) }
+        .map { Guarded(name: item.name, path: $0.path, probe: item.probe, bundleID: item.bundleID) }
     }
+  }
+
+  // Системные процессы не замораживаются никогда: замёрзший Dock или loginwindow вешает весь Мак.
+  static func isSystem(_ path: String) -> Bool {
+    let own = Bundle.main.bundlePath
+    return ["/System/Library/", "/usr/", "/bin/", "/sbin/", "/Library/Apple/"].contains { path.hasPrefix($0) }
+      || path.hasPrefix(own + "/")
+  }
+
+  // Почему эту программу нельзя защищать: системная, сам ContextMeter или VPN —
+  // замороженный VPN-клиент не сможет переподключиться, и программы не оттают никогда.
+  static func refusal(for url: URL) -> String? {
+    let path = url.path
+    if isSystem(path + "/") || path == Bundle.main.bundlePath { return "Это системная программа или сам ContextMeter." }
+    let contents = url.appendingPathComponent("Contents")
+    if FileManager.default.fileExists(atPath: contents.appendingPathComponent("Library/SystemExtensions").path) {
+      return "Похоже на VPN или сетевой фильтр: у программы есть системное расширение."
+    }
+    let plugins = contents.appendingPathComponent("PlugIns")
+    for appex in (try? FileManager.default.contentsOfDirectory(atPath: plugins.path)) ?? [] {
+      let info = NSDictionary(contentsOf: plugins.appendingPathComponent(appex).appendingPathComponent("Contents/Info.plist"))
+      let point = (info?["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String ?? ""
+      if point.hasPrefix("com.apple.networkextension") { return "Это VPN или сетевой фильтр." }
+    }
+    let name = url.deletingPathExtension().lastPathComponent.lowercased()
+    let vpnWords = ["vpn", "wireguard", "clash", "v2ray", "hiddify", "outline", "tunnelblick", "shadowrocket",
+                    "surge", "streisand", "nekoray", "foxray", "amnezia", "happ", "sing-box", "proxy"]
+    if vpnWords.contains(where: { name.contains($0) }) { return "По названию похоже на VPN или прокси." }
+    return nil
   }
 }
 
@@ -210,18 +262,19 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
   }
   var guarded: [Guarded] {
     get { (defaults.data(forKey: "guardedApps")).flatMap { try? JSONDecoder().decode([Guarded].self, from: $0) } ?? [] }
-    set { defaults.set(try? JSONEncoder().encode(newValue), forKey: "guardedApps"); enforce() }
+    set { defaults.set(try? JSONEncoder().encode(newValue), forKey: "guardedApps"); enforce(); schedule() }
   }
   var isEnabled: Bool {
     get { defaults.object(forKey: "guardEnabled") as? Bool ?? true }
-    set { defaults.set(newValue, forKey: "guardEnabled"); enforce() }
+    set { defaults.set(newValue, forKey: "guardEnabled"); enforce(); schedule() }
   }
-  var pausedUntil: Date? { didSet { enforce() } }
+  var pausedUntil: Date? { didSet { enforce(); schedule() } }
 
   // Что видно снаружи
-  private(set) var general: View?             // адрес, на котором сошлись два сервиса
-  private(set) var disagreement: String?      // второй сервис назвал другой адрес
+  private(set) var general: View?             // адрес по сервисам IP
+  private(set) var other: View?               // второй сервис назвал другой адрес — признак раздельной маршрутизации
   private(set) var v6: View?                  // адрес IPv6, если он есть
+  private(set) var bypass: View?              // адрес мимо системного прокси (терминал, Claude Code), если прокси включён
   private(set) var views: [String: View] = [:] // как нас видят сами сайты (claude.ai, chatgpt.com)
   private(set) var checkedAt: Date?
   private(set) var isChecking = false
@@ -229,6 +282,7 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
   // Заморожено сейчас: процесс → имя программы
   private(set) var frozen: [Proc: String] = [:]
   private var suspect = false  // сеть сменилась, адрес ещё не подтверждён
+  private var generation = 0   // растёт при каждой смене сети: результат старой проверки не годится
 
   var onChange: (() -> Void)?
   private var monitor: NWPathMonitor?
@@ -260,11 +314,12 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
   }
 
   // Сменилась сеть или Мак проснулся: сразу замораживаем, потом проверяем — так программа
-  // не успевает отправить ни одного запроса с неправильного адреса.
+  // не успевает отправить запрос с неправильного адреса.
   private func networkChanged() {
     guard seenFirstPath else { seenFirstPath = true; return }
+    generation += 1
     if canFreeze { suspect = true; enforce() }
-    check()
+    check(force: true)
   }
 
   private var canFreeze: Bool {
@@ -277,16 +332,17 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
     if let v6, !allowed.contains(v6.country) { return .bad }  // IPv6 мимо VPN
     if let probe = app.probe, let view = views[probe] { return allowed.contains(view.country) ? .ok : .bad }
     guard let general else { return .unknown }
-    return allowed.contains(general.country) && disagreement == nil ? .ok : .bad
+    if let other, !allowed.contains(other.country) { return .bad }
+    return allowed.contains(general.country) ? .ok : .bad
   }
 
   // Общее состояние для строки меню: худшее по программам; без программ — по общему адресу.
   var overall: Health {
-    if allowed.isEmpty { return general == nil ? .unknown : .ok }
+    if allowed.isEmpty { return general == nil && views.isEmpty ? .unknown : .ok }
     let apps = guarded
     if apps.isEmpty {
-      guard let general else { return .unknown }
-      return allowed.contains(general.country) ? .ok : .bad
+      guard let country = shownCountry else { return .unknown }
+      return allowed.contains(country) ? .ok : .bad
     }
     let states = apps.map(health(for:))
     if states.contains(.bad) { return .bad }
@@ -296,39 +352,62 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
   // Страна, которую показываем: так видит Claude, иначе общий адрес.
   var shownCountry: String? { views["claude.ai"]?.country ?? general?.country }
 
-  func check() {
-    guard !isChecking else { return }
+  func check(force: Bool = false) {
+    guard !isChecking || force else { return }
     isChecking = true
+    let round = generation
     let probes = Set(guarded.compactMap(\.probe)).union(["claude.ai"])
+    let proxy = LeakWindow.systemProxy()
     Task.detached { [weak self] in
       let session = Net.session()
       async let first = Net.ip("https://api.ipify.org", v6: false, in: session)
       async let second = Net.ip("https://ipv4.icanhazip.com", v6: false, in: session)
       async let six = Net.ip("https://api6.ipify.org", v6: true, in: session)
-      var seen: [String: View] = [:]
-      for probe in probes {
-        if let view = await Net.trace(probe, in: session) { seen[probe] = view }
+      // Сайты — параллельно: на мёртвой сети каждый ждёт до таймаута.
+      let seen = await withTaskGroup(of: (String, View?).self) { group in
+        for probe in probes { group.addTask { (probe, await Net.trace(probe, in: session)) } }
+        var out: [String: View] = [:]
+        for await (probe, view) in group { if let view { out[probe] = view } }
+        return out
       }
       let (a, b, ip6) = await (first, second, six)
       session.invalidateAndCancel()
-      var general: View?
-      var other: String?
-      if let ip = a ?? b {
-        if let a, let b, a != b { other = b }
-        if let country = await Net.country(of: ip) { general = View(ip: ip, country: country) }
+      // Страна адреса; если базы молчат, а адрес тот же, что видит claude.ai, — его страна.
+      @Sendable func view(of ip: String?) async -> View? {
+        guard let ip else { return nil }
+        if let country = await Net.country(of: ip) { return View(ip: ip, country: country) }
+        if let claude = seen["claude.ai"], claude.ip == ip { return claude }
+        return nil
       }
-      var v6: View?
-      if let ip6, let country = await Net.country(of: ip6) { v6 = View(ip: ip6, country: country) }
+      async let generalView = view(of: a ?? b)
+      async let otherView = (a != nil && b != nil && a != b) ? view(of: b) : nil
+      async let v6View = view(of: ip6)
+      let (general, other, v6) = await (generalView, otherView, v6View)
+      // Мимо системного прокси выходят терминал и Claude Code: проверяем, только если прокси включён.
+      var bypass: View?
+      if proxy != nil {
+        let direct = Net.session(direct: true)
+        bypass = await view(of: await Net.ip("https://api.ipify.org", v6: false, in: direct))
+        direct.invalidateAndCancel()
+      }
+      let result = (general, other, v6, bypass, seen)
       DispatchQueue.main.async {
-        self?.apply(general: general, other: other, v6: v6, views: seen)
+        guard let self else { return }
+        guard round == self.generation else {  // сеть сменилась, пока шла проверка — ответ устарел
+          self.isChecking = false
+          self.check()
+          return
+        }
+        self.apply(general: result.0, other: result.1, v6: result.2, bypass: result.3, views: result.4)
       }
     }
   }
 
-  private func apply(general: View?, other: String?, v6: View?, views: [String: View]) {
+  private func apply(general: View?, other: View?, v6: View?, bypass: View?, views: [String: View]) {
     self.general = general
-    self.disagreement = other
+    self.other = other
     self.v6 = v6
+    self.bypass = bypass
     self.views = views
     checkedAt = Date()
     isChecking = false
@@ -337,13 +416,14 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
     schedule()
   }
 
-  // Пока что-то не так — проверяем часто, чтобы отпустить быстро; когда всё хорошо — редко.
+  // Часто проверяем, только когда это что-то решает: программы заморожены или вот-вот будут.
+  // Иначе — раз в 20 секунд, даже если страна не та (например, в поездке с выключенной защитой).
   private func schedule() {
     timer?.invalidate()
-    let isCalm = frozen.isEmpty && overall != .bad
-    let interval: TimeInterval = isCalm ? 20 : 3
+    let isUrgent = canFreeze && (!frozen.isEmpty || overall != .ok)
+    let interval: TimeInterval = isUrgent ? 3 : 20
     let timer = Timer(timeInterval: interval, repeats: false) { [weak self] _ in self?.check() }
-    timer.tolerance = isCalm ? 5 : 0.5
+    timer.tolerance = isUrgent ? 0.5 : 5
     RunLoop.main.add(timer, forMode: .common)
     self.timer = timer
   }
@@ -353,10 +433,12 @@ final class NetGuard: @unchecked Sendable {  // состояние трогае�
     defer { saveFrozen(); onChange?() }
     let toFreeze = canFreeze ? guarded.filter { health(for: $0) != .ok } : []
     if toFreeze.isEmpty && frozen.isEmpty { return }  // всё спокойно — процессы даже не перебираем
-    let all = Procs.list()
+    guard let all = Procs.list() else { return }      // список не прочитался — ничего не меняем
     var wanted: [Proc: String] = [:]
     for app in toFreeze {
-      for proc in Procs.tree(of: [app.path], in: all) { wanted[proc] = app.name }
+      for item in Procs.tree(of: app, in: all) where frozen[item.proc] != nil || !item.isStopped {
+        wanted[item.proc] = app.name
+      }
     }
     for (proc, _) in frozen where wanted[proc] == nil { Procs.send(proc, SIGCONT) }
     for (proc, _) in wanted where frozen[proc] == nil { Procs.send(proc, SIGSTOP) }
