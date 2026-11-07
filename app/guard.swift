@@ -224,25 +224,25 @@ struct Guarded: Codable, Hashable {
       || path.hasPrefix(own + "/")
   }
 
-  // Почему эту программу нельзя защищать: системная, сам ContextMeter или VPN —
+  // Почему эту программу нельзя защищать: системная, сам Claudex или VPN —
   // замороженный VPN-клиент не сможет переподключиться, и программы не оттают никогда.
   static func refusal(for url: URL) -> String? {
     let path = url.path
-    if isSystem(path + "/") || path == Bundle.main.bundlePath { return "Это системная программа или сам ContextMeter." }
+    if isSystem(path + "/") || path == Bundle.main.bundlePath { return t("It is a system app or Claudex itself.", "Это системная программа или сам Claudex.") }
     let contents = url.appendingPathComponent("Contents")
     if FileManager.default.fileExists(atPath: contents.appendingPathComponent("Library/SystemExtensions").path) {
-      return "Похоже на VPN или сетевой фильтр: у программы есть системное расширение."
+      return t("Looks like a VPN or network filter: the app has a system extension.", "Похоже на VPN или сетевой фильтр: у программы есть системное расширение.")
     }
     let plugins = contents.appendingPathComponent("PlugIns")
     for appex in (try? FileManager.default.contentsOfDirectory(atPath: plugins.path)) ?? [] {
       let info = NSDictionary(contentsOf: plugins.appendingPathComponent(appex).appendingPathComponent("Contents/Info.plist"))
       let point = (info?["NSExtension"] as? [String: Any])?["NSExtensionPointIdentifier"] as? String ?? ""
-      if point.hasPrefix("com.apple.networkextension") { return "Это VPN или сетевой фильтр." }
+      if point.hasPrefix("com.apple.networkextension") { return t("It is a VPN or network filter.", "Это VPN или сетевой фильтр.") }
     }
     let name = url.deletingPathExtension().lastPathComponent.lowercased()
     let vpnWords = ["vpn", "wireguard", "clash", "v2ray", "hiddify", "outline", "tunnelblick", "shadowrocket",
                     "surge", "streisand", "nekoray", "foxray", "amnezia", "happ", "sing-box", "proxy"]
-    if vpnWords.contains(where: { name.contains($0) }) { return "По названию похоже на VPN или прокси." }
+    if vpnWords.contains(where: { name.contains($0) }) { return t("By its name it looks like a VPN or proxy.", "По названию похоже на VPN или прокси.") }
     return nil
   }
 }

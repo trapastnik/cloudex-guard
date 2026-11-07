@@ -1,10 +1,10 @@
-// ContextMeter — строка меню с заполнением контекста всех чатов Claude.
-// Данные пишет мод ~/.claude/mods/context-meter: по файлу на чат в ~/.claude/context-meter.
+// Claudex — строка меню с заполнением контекста всех чатов Claude.
+// Данные пишет мод ~/.claude/mods/claudex: по файлу на чат в ~/.claude/claudex.
 
 import AppKit
 
 let dataDir = FileManager.default.homeDirectoryForCurrentUser
-  .appendingPathComponent(".claude/context-meter")
+  .appendingPathComponent(".claude/claudex")
 // Обновление идёт по событию от macOS, когда мод пишет файл; таймер — редкая подстраховка.
 let fallbackSeconds = 60.0
 // Чаты, не отвечавшие дольше, уходят в подменю «Давно не активные»; ещё дольше — скрыты.
@@ -13,7 +13,9 @@ let requestsDir = dataDir.appendingPathComponent("requests")
 let aliveDir = dataDir.appendingPathComponent("alive")
 let aliveSeconds = 150.0
 // Текст просьбы — тот же, что мод отправляет сам (CLEANUP_TEXT в register.tsx).
-let cleanupText = "У тебя достаточно большой контекст, когда сможешь, пожалуйста сохрани все подробно в документации напиши подробный Handoff и короткий текст для вставки в новый чат после чего будем тебя чистить."
+let cleanupText = t(
+  "Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text to paste into a new chat — after that we will clear this chat.",
+  "У тебя достаточно большой контекст, когда сможешь, пожалуйста сохрани все подробно в документации напиши подробный Handoff и короткий текст для вставки в новый чат после чего будем тебя чистить.")
 
 func isAlive(_ id: String) -> Bool {
   guard let text = try? String(contentsOf: aliveDir.appendingPathComponent(id), encoding: .utf8),
@@ -60,9 +62,9 @@ func short(_ n: Int) -> String {
 
 func ago(_ date: Date) -> String {
   let minutes = Int(-date.timeIntervalSinceNow / 60)
-  if minutes < 60 { return "\(max(minutes, 0)) мин" }
-  if minutes < 60 * 24 { return "\(minutes / 60) ч" }
-  return "\(minutes / 60 / 24) дн"
+  if minutes < 60 { return "\(max(minutes, 0)) " + t("min", "мин") }
+  if minutes < 60 * 24 { return "\(minutes / 60) " + t("h", "ч") }
+  return "\(minutes / 60 / 24) " + t("d", "дн")
 }
 
 func dot(_ percent: Int, size: CGFloat) -> NSAttributedString {
@@ -79,23 +81,23 @@ struct Limit: Decodable {
 
   var name: String {
     switch kind {
-    case "five_hour": return "5 ч"
-    case "seven_day": return "Неделя"
-    case "spend_limit": return "Расход"
+    case "five_hour": return t("5 h", "5 ч")
+    case "seven_day": return t("Week", "Неделя")
+    case "spend_limit": return t("Spend", "Расход")
     default:
       // seven_day_fable → «Неделя Fable» и подобные окна по моделям.
       let model = kind.replacingOccurrences(of: "seven_day_", with: "").capitalized
-      return kind.hasPrefix("seven_day_") ? "Нед. \(model)" : kind
+      return kind.hasPrefix("seven_day_") ? t("Wk ", "Нед. ") + model : kind
     }
   }
 
   // Короткая метка для строки меню, где каждая точка на счету: «5ч», «Н», «Н·F».
   var tag: String {
     switch kind {
-    case "five_hour": return "5ч"
-    case "seven_day": return "Н"
+    case "five_hour": return t("5h", "5ч")
+    case "seven_day": return t("W", "Н")
     case "spend_limit": return "$"
-    default: return kind.hasPrefix("seven_day_") ? "Н·" + kind.dropFirst(10).prefix(1).uppercased() : kind
+    default: return kind.hasPrefix("seven_day_") ? t("W·", "Н·") + kind.dropFirst(10).prefix(1).uppercased() : kind
     }
   }
 
@@ -120,10 +122,10 @@ func loadLimits() -> [Limit] {
 func until(_ date: Date?) -> String {
   guard let date else { return "" }
   let minutes = Int(date.timeIntervalSinceNow / 60)
-  if minutes <= 0 { return "сброшен" }
-  if minutes < 60 * 24 { return minutes < 60 ? "\(minutes) мин" : "\(minutes / 60) ч \(minutes % 60) мин" }
+  if minutes <= 0 { return t("reset", "сброшен") }
+  if minutes < 60 * 24 { return minutes < 60 ? "\(minutes) " + t("min", "мин") : "\(minutes / 60) \(t("h", "ч")) \(minutes % 60) \(t("min", "мин"))" }
   let format = DateFormatter()
-  format.locale = Locale(identifier: "ru_RU")
+  format.locale = Locale(identifier: isRussian ? "ru_RU" : "en_US")
   format.dateFormat = "EE HH:mm"
   return format.string(from: date)
 }
@@ -174,8 +176,8 @@ final class RowView: NSView {
     cleanButton.isBordered = false
     cleanButton.title = isPending ? "⏳" : "🧹"
     cleanButton.toolTip = isPending
-      ? "Просьба ждёт: чат спит. Нажмите — откроется чат, текст будет в буфере обмена"
-      : "Попросить чат сохранить документацию и handoff перед очисткой"
+      ? t("Request is waiting: the chat is asleep. Click to open it with the text on your clipboard", "Просьба ждёт: чат спит. Нажмите — откроется чат, текст будет в буфере обмена")
+      : t("Ask the chat to save docs and a handoff before you clear it", "Попросить чат сохранить документацию и handoff перед очисткой")
     cleanButton.target = self
     cleanButton.action = #selector(askCleanup)
     let stack = NSStackView(views: [label, cleanButton])
@@ -222,9 +224,9 @@ final class RowView: NSView {
     NSPasteboard.general.setString(cleanupText, forType: .string)
     open(chat)
     let alert = NSAlert()
-    alert.messageText = "Чат «\(chat.title)» спит"
-    alert.informativeText = "Он открыт, текст просьбы в буфере обмена — вставьте его в чат (⌘V) и нажмите Enter."
-    alert.addButton(withTitle: "Понятно")
+    alert.messageText = t("“\(chat.title)” is asleep", "Чат «\(chat.title)» спит")
+    alert.informativeText = t("It is open now and the request is on your clipboard — paste it into the chat (⌘V) and press Enter.", "Он открыт, текст просьбы в буфере обмена — вставьте его в чат (⌘V) и нажмите Enter.")
+    alert.addButton(withTitle: t("OK", "Понятно"))
     NSApp.activate(ignoringOtherApps: true)
     alert.runModal()
     open(chat)
@@ -248,12 +250,12 @@ final class RowView: NSView {
       }
       NSApp.activate(ignoringOtherApps: true)
       let alert = NSAlert()
-      alert.messageText = "Подготовить «\(chat.title)» к очистке?"
+      alert.messageText = t("Prepare “\(chat.title)” for clearing?", "Подготовить «\(chat.title)» к очистке?")
       alert.informativeText = isAwake
-        ? "Чат получит просьбу сохранить всё в документации, написать подробный handoff и короткий текст для нового чата. Сообщение уйдёт, когда чат освободится."
-        : "Чат спит, сам он просьбу не получит. Чат откроется, а текст просьбы окажется в буфере обмена — останется вставить (⌘V) и нажать Enter."
-      alert.addButton(withTitle: isAwake ? "Отправить" : "Открыть и скопировать")
-      alert.addButton(withTitle: "Отмена")
+        ? t("The chat will be asked to save everything to the docs, write a detailed handoff and a short text for a new chat. The message is sent when the chat is free.", "Чат получит просьбу сохранить всё в документации, написать подробный handoff и короткий текст для нового чата. Сообщение уйдёт, когда чат освободится.")
+        : t("The chat is asleep and won’t get the request by itself. It will open with the text on your clipboard — just paste (⌘V) and press Enter.", "Чат спит, сам он просьбу не получит. Чат откроется, а текст просьбы окажется в буфере обмена — останется вставить (⌘V) и нажать Enter.")
+      alert.addButton(withTitle: isAwake ? t("Send", "Отправить") : t("Open and copy", "Открыть и скопировать"))
+      alert.addButton(withTitle: t("Cancel", "Отмена"))
       guard alert.runModal() == .alertFirstButtonReturn else { return }
       guard isAwake else {
         NSPasteboard.general.clearContents()
@@ -262,7 +264,7 @@ final class RowView: NSView {
         return
       }
       try? FileManager.default.createDirectory(at: requestsDir, withIntermediateDirectories: true)
-      let body = ["createdAt": Int(Date().timeIntervalSince1970 * 1000)]
+      let body: [String: Any] = ["createdAt": Int(Date().timeIntervalSince1970 * 1000), "text": cleanupText]
       if let data = try? JSONSerialization.data(withJSONObject: body) {
         try? data.write(to: requestsDir.appendingPathComponent("\(chat.id).json"))
       }
@@ -275,7 +277,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   var stream: FSEventStreamRef?
 
   func applicationDidFinishLaunching(_ note: Notification) {
-    item.autosaveName = "ContextMeter"
+    item.autosaveName = "Claudex"
     item.menu = NSMenu()
     item.menu?.delegate = self
     // Строки лимитов без действия должны выглядеть обычными, а не серыми.
@@ -369,7 +371,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let ready = chats.filter { waiting($0) == .ready }
     let waitingChats: [Chat] = (asking + ready.sorted { $0.updatedAt > $1.updatedAt })
     if !waitingChats.isEmpty {
-      let header = NSMenuItem(title: "Ждут вас", action: nil, keyEquivalent: "")
+      let header = NSMenuItem(title: t("Waiting for you", "Ждут вас"), action: nil, keyEquivalent: "")
       header.isEnabled = false
       menu.addItem(header)
       for chat in waitingChats { menu.addItem(row(chat)) }
@@ -377,14 +379,14 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     if chats.isEmpty {
-      menu.addItem(NSMenuItem(title: "Пока нет данных — ответ в любом чате их создаст", action: nil, keyEquivalent: ""))
+      menu.addItem(NSMenuItem(title: t("No data yet — any chat reply will create it", "Пока нет данных — ответ в любом чате их создаст"), action: nil, keyEquivalent: ""))
     }
     if !chats.isEmpty {
       // Подменю по времени последнего ответа, а основной список — по заполненности.
       let recent = NSMenu()
       recent.autoenablesItems = false
       for chat in chats.sorted(by: { $0.updated > $1.updated }).prefix(recentCount) { recent.addItem(row(chat)) }
-      let holder = NSMenuItem(title: "Последние \(min(recentCount, chats.count)) чатов", action: nil, keyEquivalent: "")
+      let holder = NSMenuItem(title: t("Recent \(min(recentCount, chats.count)) chats", "Последние \(min(recentCount, chats.count)) чатов"), action: nil, keyEquivalent: "")
       holder.submenu = recent
       menu.addItem(holder)
       menu.addItem(.separator())
@@ -393,14 +395,15 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     if !stale.isEmpty {
       let sub = NSMenu()
       for chat in stale { sub.addItem(row(chat)) }
-      let holder = NSMenuItem(title: "Давно не активные (\(stale.count))", action: nil, keyEquivalent: "")
+      let holder = NSMenuItem(title: t("Inactive (\(stale.count))", "Давно не активные (\(stale.count))"), action: nil, keyEquivalent: "")
       holder.submenu = sub
       menu.addItem(.separator())
       menu.addItem(holder)
     }
     menu.addItem(.separator())
-    menu.addItem(withTitle: "Открыть папку данных", action: #selector(openDir), keyEquivalent: "").target = self
-    menu.addItem(withTitle: "Выход", action: #selector(quit), keyEquivalent: "q").target = self
+    menu.addItem(withTitle: t("Open data folder", "Открыть папку данных"), action: #selector(openDir), keyEquivalent: "").target = self
+    menu.addItem(withTitle: t("Support Claudex ♥", "Поддержать Claudex ♥"), action: #selector(support), keyEquivalent: "").target = self
+    menu.addItem(withTitle: t("Quit Claudex", "Выйти из Claudex"), action: #selector(quit), keyEquivalent: "q").target = self
   }
 
   // «5 ч      ▰▱▱▱▱▱▱▱▱▱   5%  2 ч 58 мин»
@@ -455,6 +458,10 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     return createdAt > done && age < 600  // мод не выполняет просьбы старше 10 минут
   }
 
+  @objc func support() {
+    if let url = URL(string: supportURL) { NSWorkspace.shared.open(url) }
+  }
+
   @objc func openDir() {
     try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
     NSWorkspace.shared.open(dataDir)
@@ -469,12 +476,13 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
 // Место значка по умолчанию — правее, ближе к часам: левые значки при переполненной
 // строке меню уходят под вырез экрана и пропадают. Перетаскивание с ⌘ macOS запоминает
 // под тем же ключом, и тогда эта настройка его не трогает.
-let positionKey = "NSStatusItem Preferred Position ContextMeter"
+let supportURL = "https://github.com/trapastnik/claudex#support"
+let positionKey = "NSStatusItem Preferred Position Claudex"
 if UserDefaults.standard.object(forKey: positionKey) == nil {
   UserDefaults.standard.set(260.0, forKey: positionKey)
 }
 
-// Служебная проверка из терминала: ContextMeter --speedtest
+// Служебная проверка из терминала: Claudex --speedtest
 if CommandLine.arguments.contains("--speedtest") {
   SpeedTest.shared.onChange = {
     guard !SpeedTest.shared.isRunning else { return }

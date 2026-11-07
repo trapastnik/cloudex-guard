@@ -1,101 +1,113 @@
-# ContextMeter
+# Claudex
 
-Строка меню macOS для тех, кто работает в Claude Code в десктопном приложении Claude: сколько контекста занято в каждом чате, сколько осталось от лимитов, и что видит внешний мир о вашем подключении — с заморозкой выбранных программ, когда VPN отвалился.
+**Keep your Claude Code chats clean.** A small macOS menu bar companion for Claude Code in the Claude desktop app: see how full every chat's context is, which chats are waiting for you, and ask a chat to write a handoff before you clear it. Plus a network guard that pauses chosen apps when your connection suddenly changes.
 
-*A macOS menu bar app for Claude Code in the Claude desktop app: context window fill of every chat, plan limits, your public IP as AI services see it, and a kill switch that freezes chosen apps when the VPN drops. The UI is in Russian.*
+Free and open source (MIT). [Русская версия](README.ru.md) · [dvn-dev.tech](https://dvn-dev.tech)
 
-## Что умеет
+> Claudex is an independent project. It is not made, endorsed or supported by Anthropic. Claude and Claude Code are trademarks of Anthropic.
 
-**Контекст и лимиты**
-- Цветная точка и процент самого заполненного чата прямо в строке меню.
-- Список всех чатов по заполненности: процент, токены, группа, когда был последний ответ. Клик открывает чат.
-- Подменю «Последние 10 чатов» — по времени.
-- **«Ждут вас»** — раздел сверху, только когда есть кого показать: ✋ — чат стоит, пока вы не дадите разрешение или не ответите на его вопрос; 💬 — закончил ход в последний час, а вы ему ещё не написали. Число ✋ видно и в строке меню: `✋2`.
-- Лимиты аккаунта: 5 часов и неделя, с полоской и временем сброса. В строке меню появляются, только когда дошли до 80%.
-- Кнопка 🧹 у чата: просит его сохранить всё в документации, написать handoff и короткий текст для нового чата — перед очисткой. Сначала спрашивает подтверждение. Запущенный чат получает просьбу в течение 10 секунд; спящий открывается, а текст кладётся в буфер обмена. Просьба, которую чат не забрал за 10 минут, отменяется — проснувшись через день, он её не получит.
+## Why
 
-**Сеть и VPN**
-- Флаг страны в строке меню; в меню — адрес, каким его видит claude.ai, и предупреждение, если VPN ведёт трафик разными путями или есть IPv6 мимо туннеля.
-- **Заморозка.** Выберите программы (Claude, ChatGPT, Cursor, Telegram или любую свою) и разрешённые страны. Если адрес не разрешён, программа встаёт на паузу (`SIGSTOP`) вместе со всем, что она запустила, — у Claude это и Claude Code, и MCP-серверы. Вернулся правильный адрес — продолжает с того же места (`SIGCONT`), ничего не теряется. При смене сети и после сна программы замораживаются сразу и тут же отпускаются, если адрес в порядке.
-- Claude, ChatGPT и Perplexity проверяются по тому, что видит их собственный сайт (`/cdn-cgi/trace`), поэтому раздельная маршрутизация VPN не даёт ложных заморозок.
-- **Тест скорости** по кнопке, одной строкой: загрузка и отдача через speed.cloudflare.com, задержка до Claude, его API и ChatGPT — `↓10 ↑4 Мбит/с · Claude 118 · API 107 · ChatGPT 124 мс`. Около 12 секунд, в фоне не запускается.
-- Пауза защиты на 15 минут или час.
-- При выходе и перезапуске ContextMeter отпускает всё, что заморозил. Если он упал, агент автозапуска поднимает его в течение минуты, и он сразу отпускает программы, замороженные до сбоя. Без автозапуска то же сделает любой запуск ContextMeter.
-- Защитить нельзя системные программы (Finder, Dock и прочее из `/System/Library`), сам ContextMeter и VPN-клиенты: замороженный VPN не сможет переподключиться, и программы не оттают. Процессы, которые вы сами остановили (Ctrl-Z в терминале), ContextMeter не трогает.
-- **«Как нас видят…»** — разовая проверка: что видят claude.ai, API Claude Code, chatgpt.com и Cloudflare; ответы четырёх сервисов IP; программы мимо системного прокси; IPv6; сервер DNS; часовой пояс Мака против пояса страны IP; язык и регион системы.
-- Если включён системный прокси (VPN-клиенты в режиме прокси: Clash, v2rayN, Hiddify), в меню видно и то, через какую страну выходят программы, которые прокси не используют, — терминал и Claude Code.
+If you run many Claude Code chats in parallel, they quietly fill up. A chat at 80% context gets slower, forgets earlier details, and eventually compacts at the worst moment. Claudex shows every chat's fill at a glance, so you clear the right chat at the right time — after it has saved its state.
 
-Пока не выбраны страны и программы, ничего не замораживается — только показывается.
+## Features
 
-## Как устроено
+### Chat hygiene
 
-Две части:
+- **Context at a glance** — a colored dot and the fullest chat's percentage right in the menu bar.
+- **Every chat by fill** — percent, tokens, sidebar group and time of the last reply. Click a row to open the chat.
+- **Waiting for you** — a section that appears only when needed: ✋ a chat is blocked on your permission or answer, 💬 a chat finished its turn in the last hour and you haven't replied yet. The ✋ count shows in the menu bar too.
+- **Handoff before clearing (🧹)** — one click asks a chat to save everything to the project docs, write a detailed handoff and a short text to start a new chat. Asks you to confirm first. A sleeping chat opens with the text on your clipboard.
+- **Recent 10 chats** and **plan limits** (5-hour and weekly, with reset times; shown in the menu bar only above 80%).
 
-- **`mod/`** — мод Claude Code (плагин с function hooks). Работает внутри каждого чата десктопного приложения Claude (вкладка Code) и после каждого ответа пишет его заполнение в `~/.claude/context-meter/<адрес чата>.json`, лимиты — в `_limits.json`, состояние (работает, ждёт решения, закончил) — в `status/`. Токенов модели не тратит и ничего не отправляет в сеть. В терминальном `claude`, `claude -p` и скриптах ничего не делает.
-- **`context-meter-menubar/`** — приложение для строки меню на Swift, около 1500 строк, без зависимостей. Читает эти файлы — обновляется по событиям файловой системы, плюс страховочная перечитка раз в минуту — и следит за сетью. Служебные файлы старше 30 дней (просьбы 🧹 — старше суток) удаляет при запуске.
+### Network guard
 
-## Установка
+Many people reach AI services through a VPN — a corporate one, or just for privacy. When the VPN reconnects, Wi-Fi changes or the exit server switches to another country, your apps keep talking from the new address before you notice. Claudex can pause the apps you choose until your connection is back to the countries you allow.
 
-Нужны macOS 13+, Command Line Tools (`xcode-select --install`) и десктопное приложение Claude.
+- **Your country in the menu bar**, as claude.ai sees it, with a warning when your VPN routes some traffic another way or IPv6 bypasses it.
+- **Pause, don't kill.** Pick apps (Claude, ChatGPT, Cursor, Telegram or any other) and allowed countries. On a network change the apps are paused instantly (`SIGSTOP`, together with everything they started — for Claude that includes Claude Code and MCP servers) and resumed in about a second if all is well (`SIGCONT`). Nothing is lost: an app continues exactly where it stopped.
+- **Checks what the service itself sees.** Claude, ChatGPT and Perplexity are checked through their own sites, so split-tunnel VPNs don't cause false pauses.
+- **How others see us** — a one-off check: what claude.ai, the Claude API, chatgpt.com and Cloudflare see; four IP services one by one; apps that ignore the system proxy; IPv6; your DNS server; your Mac's time zone vs. the IP's.
+- **Speed test** in one menu line: download, upload, and latency to Claude, its API and ChatGPT. About 12 seconds, on demand only.
+- **Safe by design**: system apps, Claudex itself and VPN clients can't be paused (a paused VPN could never reconnect). Processes you stopped yourself (Ctrl-Z) are left alone. Quitting or restarting Claudex resumes everything; if it crashes, the login agent restarts it within a minute and it resumes whatever it had paused.
+
+Nothing is paused until you choose at least one country and one app. Claudex doesn't change or route your traffic — it only pauses apps on your own Mac.
+
+The interface follows your system language: English or Russian.
+
+## Install
+
+You need macOS 13 or later and the Claude desktop app. Claudex has two parts: a **mod** that runs inside each Claude Code chat and reports its numbers, and the **menu bar app** that shows them.
+
+**1. Get the code and install the mod**
 
 ```bash
-git clone https://github.com/trapastnik/context-meter.git
-cd context-meter
+git clone https://github.com/trapastnik/claudex.git
+cd claudex
 ./install-mod.sh
 ```
 
-Скрипт скопирует мод в `~/.claude/mods/context-meter` и подскажет блок, который нужно один раз добавить в `~/.claude/settings.json`:
+The script copies the mod to `~/.claude/mods/claudex` and prints a block to add once to `~/.claude/settings.json`:
 
 ```json
 "env": {
-  "CLAUDE_CODE_PLUGIN_DIRS": "/Users/<вы>/.claude/mods/context-meter",
+  "CLAUDE_CODE_PLUGIN_DIRS": "/Users/<you>/.claude/mods/claudex",
   "CLAUDE_CODE_PLUGIN_DIR_WATCH": "1"
 }
 ```
 
-Настройка общая для всех сессий Claude Code на этом Маке, но вне десктопного приложения мод ничего не делает. Если блок `env` в файле уже есть, добавьте эти две строки внутрь него, а не второй блок. Если `CLAUDE_CODE_PLUGIN_DIRS` уже задан, допишите путь к моду через двоеточие. Проверить, что файл остался корректным: `python3 -m json.tool ~/.claude/settings.json > /dev/null && echo OK`.
+If the file already has an `env` block, add the two lines inside it. If `CLAUDE_CODE_PLUGIN_DIRS` is already set, append the path with a colon. Check the file is still valid: `python3 -m json.tool ~/.claude/settings.json > /dev/null && echo OK`. The setting applies to every Claude Code session on this Mac, but the mod does nothing outside the desktop app. Restart Claude.
 
-Перезапустите Claude. Затем соберите приложение и включите автозапуск:
-
-```bash
-./context-meter-menubar/build.sh
-./context-meter-menubar/autostart.sh
-```
-
-Приложение ставится в `~/Applications/ContextMeter.app`. Выключить автозапуск — `./context-meter-menubar/autostart.sh off`.
-
-## Удаление
+**2. Install the app** — either build it (needs `xcode-select --install`):
 
 ```bash
-./context-meter-menubar/autostart.sh off
-pkill -x ContextMeter
-rm -rf ~/Applications/ContextMeter.app ~/.claude/mods/context-meter ~/.claude/context-meter
+./app/build.sh
+./app/autostart.sh
 ```
 
-и уберите две строки из блока `env` в `~/.claude/settings.json`. Настройки защиты лежат в `~/Library/Preferences/io.github.trapastnik.context-meter.plist`.
+or download `Claudex-macos.zip` from [Releases](https://github.com/trapastnik/claudex/releases), unzip it into `~/Applications`, and since the app isn't notarized by Apple, remove the download quarantine once: `xattr -dr com.apple.quarantine ~/Applications/Claudex.app`. Then run `./app/autostart.sh` from the cloned repo to start it at login.
 
-## Что приложение отправляет в сеть
+## What goes over the network
 
-Только запросы, нужные для определения адреса, без аналитики и без отправки чего-либо о вас или ваших чатах:
+Only what's needed to find out your address — no analytics, nothing about you or your chats. The mod sends nothing at all.
 
-- раз в 20 секунд: `claude.ai/cdn-cgi/trace` (и сайт каждой защищаемой программы), `api.ipify.org`, `ipv4.icanhazip.com`, `api6.ipify.org`. Раз в 3 секунды — только пока программы заморожены или вот-вот будут: так они быстрее оттаивают;
-- если включён системный прокси — ещё один запрос к `api.ipify.org` мимо прокси при каждой проверке: он показывает ipify ваш адрес без VPN;
-- страна адреса: `ipinfo.io`, запасной — `api.country.is`; адрес передаётся им в запросе, ответ кэшируется до перезапуска;
-- по кнопке «Тест скорости»: `speed.cloudflare.com` (до 25 МБ на загрузку, но не дольше 6 секунд, и 1,5 МБ на отдачу) и по четыре запроса к `claude.ai`, `api.anthropic.com`, `chatgpt.com`;
-- по кнопке «Как нас видят…» дополнительно: `api.anthropic.com`, `chatgpt.com`, `1.1.1.1`, `checkip.amazonaws.com`, `v4.ident.me`, `ipv6.icanhazip.com`, `ipinfo.io/json`, адрес сервера DNS — в `ipinfo.io`, и DNS-запрос `whoami.akamai.net`. Если включён системный прокси, проверка намеренно обращается к `claude.ai` и `api.ipify.org` мимо него — чтобы показать, что видят программы без прокси; эти два сайта при этом увидят ваш адрес без VPN.
+- Every 20 seconds: `claude.ai/cdn-cgi/trace` (plus the site of each guarded app), `api.ipify.org`, `ipv4.icanhazip.com`, `api6.ipify.org`. Every 3 seconds only while apps are paused or about to be, so they resume quickly.
+- If a system proxy is on: one more request to `api.ipify.org` that bypasses the proxy, on every check — it shows ipify your address without the VPN.
+- Country of an address: `ipinfo.io`, fallback `api.country.is`; the address is part of the request, the answer is cached until restart.
+- Speed test (on demand): `speed.cloudflare.com` (up to 25 MB down, at most 6 seconds; 1.5 MB up) and four requests each to `claude.ai`, `api.anthropic.com`, `chatgpt.com`.
+- "How others see us" (on demand) adds `api.anthropic.com`, `chatgpt.com`, `1.1.1.1`, `checkip.amazonaws.com`, `v4.ident.me`, `ipv6.icanhazip.com`, `ipinfo.io/json`, your DNS server's address to `ipinfo.io`, and a DNS lookup of `whoami.akamai.net`. With a system proxy on, it deliberately reaches `claude.ai` and `api.ipify.org` around the proxy to show what proxy-unaware apps see — those two sites then see your address without the VPN.
 
-## Если значок пропал
+Local data lives in `~/.claude/claudex`; old files are cleaned up automatically.
 
-Чаще всего его спрятала macOS: в переполненной строке меню левые значки уходят под вырез экрана. Проверьте, что приложение работает: `pgrep -lx ContextMeter`. Если да — перетащите значок правее с зажатым ⌘ или освободите место. Перезапуск: `pkill -x ContextMeter; open -g ~/Applications/ContextMeter.app`.
+## Troubleshooting
 
-## Если программа зависла после сбоя
+- **The icon is gone.** macOS hides menu bar icons that don't fit (behind the camera notch). Check it runs: `pgrep -lx Claudex`. If it does, ⌘-drag it to the right or free some space.
+- **An app looks frozen.** That's a pause. Claudex resumes it when your address is allowed again, when you quit Claudex, or right after a restart. If Claudex isn't running, start it: `open -g ~/Applications/Claudex.app`.
+- **A chat doesn't appear.** It shows up after its next reply; chats that haven't run since the Claude restart are asleep.
 
-Замороженная программа выглядит зависшей (крутится курсор). Обычно её отпускает сам ContextMeter — при перезапуске или через агент автозапуска в течение минуты. Если ContextMeter не запущен, просто откройте его: `open -g ~/Applications/ContextMeter.app` — при старте он отпускает всё, что заморозил до сбоя.
+## Uninstall
 
-## Благодарности
+```bash
+./app/autostart.sh off
+pkill -x Claudex
+rm -rf ~/Applications/Claudex.app ~/.claude/mods/claudex ~/.claude/claudex
+```
 
-Подход к заморозке и проверке утечек подсмотрен у [Kordon](https://github.com/ef1m03/kordon) (Efimov Dev): подтверждение адреса несколькими сервисами, вопрос к самому ИИ-сервису, `SIGSTOP` дерева процессов, проверка DNS через `whoami.akamai.net`. Код ContextMeter написан заново, ничего из Kordon не скопировано. Если вам нужен полноценный kill switch для Mac, Windows и Linux — с расширением для браузера и уведомлениями в Telegram, — посмотрите Kordon.
+Then remove the two lines from `env` in `~/.claude/settings.json`. Guard settings are in `~/Library/Preferences/io.github.trapastnik.claudex.plist`.
 
-## Лицензия
+## Support
 
-MIT — см. [LICENSE](LICENSE).
+Claudex is free. If it saves you time, you can support its development:
+
+- **Bitcoin (BTC):** `1JZ3neiNzLC5kiGAer5UQGQvK9xSJqnc87`
+- **Ethereum (ETH) or USDT (ERC-20, Ethereum network only):** `0x2f507c67655ddf3638c83238c71d51defe7b1fec`
+
+Please double-check the network: tokens sent through other networks (BNB Chain, Tron and so on) can be lost. Stars, bug reports and ideas in [Issues](https://github.com/trapastnik/claudex/issues) help too.
+
+## Credits
+
+The pausing and leak-check approach was inspired by [Kordon](https://github.com/ef1m03/kordon) by Efimov Dev: confirming the address with several services, asking the AI service itself, `SIGSTOP` on the whole process tree, DNS check via `whoami.akamai.net`. Claudex's code is written from scratch; nothing was copied from Kordon. If you need a full kill switch for Mac, Windows and Linux with a browser extension and Telegram alerts, have a look at Kordon.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

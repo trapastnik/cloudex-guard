@@ -30,7 +30,7 @@ final class LeakWindow: NSObject, NSWindowDelegate {
     window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 640),
                       styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
     super.init()
-    window.title = "Как нас видят"
+    window.title = t("How others see us", "Как нас видят")
     window.isReleasedWhenClosed = false
     window.delegate = self
     let scroll = NSScrollView(frame: window.contentView!.bounds)
@@ -75,14 +75,14 @@ final class LeakWindow: NSObject, NSWindowDelegate {
       let siteList = siteViews
       await MainActor.run { [weak self] in
         guard let self else { return }
-        self.add("Что видят сайты", siteList.map { name, view in
-          guard let view else { return Line(mark: .warn, label: name, value: "нет ответа") }
+        self.add(t("What sites see", "Что видят сайты"), siteList.map { name, view in
+          guard let view else { return Line(mark: .warn, label: name, value: t("no answer", "нет ответа")) }
           let ok = self.isFine(view.country, reference: reference)
           return Line(mark: ok ? .good : .warn, label: name, value: "\(flag(view.country)) \(view.country)  \(view.ip)")
         })
         let countries = Set(siteList.compactMap { $0.1?.country })
         if countries.count > 1 {
-          self.problems.append("Сайты видят разные страны (\(countries.sorted().joined(separator: ", "))): VPN пускает часть трафика другим путём.")
+          self.problems.append(t("Sites see different countries", "Сайты видят разные страны") + " (\(countries.sorted().joined(separator: ", "))): " + t("your VPN routes part of the traffic another way.", "VPN пускает часть трафика другим путём."))
         }
       }
 
@@ -97,12 +97,12 @@ final class LeakWindow: NSObject, NSWindowDelegate {
       let answerList = answers
       await MainActor.run { [weak self] in
         guard let self else { return }
-        self.add("Сервисы IP (IPv4, как браузер и приложения)", answerList.map { host, ip, country in
-          guard let ip else { return Line(mark: .warn, label: host, value: "нет ответа") }
+        self.add(t("IP services (IPv4, as browsers and apps)", "Сервисы IP (IPv4, как браузер и приложения)"), answerList.map { host, ip, country in
+          guard let ip else { return Line(mark: .warn, label: host, value: t("no answer", "нет ответа")) }
           let ok = self.isFine(country, reference: reference)
           return Line(mark: ok ? .good : .warn, label: host, value: "\(country.map { flag($0) + " " + $0 } ?? "??")  \(ip)")
         })
-        if Set(answerList.compactMap { $0.1 }).count > 1 { self.problems.append("Сервисы IP называют разные адреса.") }
+        if Set(answerList.compactMap { $0.1 }).count > 1 { self.problems.append(t("IP services report different addresses.", "Сервисы IP называют разные адреса.")) }
       }
 
       // 3. Мимо системного прокси (терминал, git, Claude Code) — только если прокси включён.
@@ -115,20 +115,20 @@ final class LeakWindow: NSObject, NSWindowDelegate {
         direct.invalidateAndCancel()
         await MainActor.run { [weak self] in
           guard let self else { return }
-          var lines = [Line(mark: .info, label: "Системный прокси", value: proxy)]
+          var lines = [Line(mark: .info, label: t("System proxy", "Системный прокси"), value: proxy)]
           if let claude {
             lines.append(Line(mark: self.isFine(claude.country, reference: reference) ? .good : .warn,
-                              label: "claude.ai напрямую", value: "\(flag(claude.country)) \(claude.country)  \(claude.ip)"))
+                              label: t("claude.ai direct", "claude.ai напрямую"), value: "\(flag(claude.country)) \(claude.country)  \(claude.ip)"))
           } else {
-            lines.append(Line(mark: .info, label: "claude.ai напрямую", value: "нет ответа — мимо прокси выхода нет"))
+            lines.append(Line(mark: .info, label: t("claude.ai direct", "claude.ai напрямую"), value: t("no answer — there is no way out around the proxy", "нет ответа — мимо прокси выхода нет")))
           }
           if let plain {
             lines.append(Line(mark: self.isFine(plainCountry, reference: reference) ? .good : .warn,
-                              label: "api.ipify.org напрямую", value: "\(plainCountry.map { flag($0) + " " + $0 } ?? "??")  \(plain)"))
+                              label: t("api.ipify.org direct", "api.ipify.org напрямую"), value: "\(plainCountry.map { flag($0) + " " + $0 } ?? "??")  \(plain)"))
           }
-          self.add("Программы мимо прокси", lines)
+          self.add(t("Apps that ignore the proxy", "Программы мимо прокси"), lines)
           if let claude, !self.isFine(claude.country, reference: reference) {
-            self.problems.append("Программы, которые не смотрят на прокси (терминал, Claude Code), выходят через \(claude.country).")
+            self.problems.append(t("Apps that ignore the proxy (terminal, Claude Code) go out through ", "Программы, которые не смотрят на прокси (терминал, Claude Code), выходят через ") + claude.country + ".")
           }
         }
       }
@@ -144,12 +144,12 @@ final class LeakWindow: NSObject, NSWindowDelegate {
       await MainActor.run { [weak self] in
         guard let self else { return }
         if sixList.allSatisfy({ $0.1 == nil }) {
-          self.add("IPv6", [Line(mark: .good, label: "IPv6", value: "нет подключения — утечки через IPv6 нет")])
+          self.add("IPv6", [Line(mark: .good, label: "IPv6", value: t("not connected — no IPv6 leak", "нет подключения — утечки через IPv6 нет"))])
         } else {
           self.add("IPv6", sixList.map { host, ip, country in
-            guard let ip else { return Line(mark: .info, label: host, value: "нет ответа") }
+            guard let ip else { return Line(mark: .info, label: host, value: t("no answer", "нет ответа")) }
             let ok = self.isFine(country, reference: reference)
-            if !ok { self.problems.append("IPv6 идёт мимо VPN: \(country ?? "??") \(ip).") }
+            if !ok { self.problems.append(t("IPv6 bypasses the VPN: ", "IPv6 идёт мимо VPN: ") + "\(country ?? "??") \(ip).") }
             return Line(mark: ok ? .good : .warn, label: host, value: "\(country.map { flag($0) + " " + $0 } ?? "??")  \(ip)")
           })
         }
@@ -179,24 +179,24 @@ final class LeakWindow: NSObject, NSWindowDelegate {
           let country = resolverFacts["country"] as? String
           let org = resolverFacts["org"] as? String ?? ""
           let ok = self.isFine(country, reference: reference)
-          self.add("DNS", [Line(mark: ok ? .good : .warn, label: "Сервер DNS",
+          self.add("DNS", [Line(mark: ok ? .good : .warn, label: t("DNS server", "Сервер DNS"),
                                 value: "\(country.map { flag($0) + " " + $0 } ?? "??")  \(resolver)  \(org)")])
-          if !ok, let country { self.problems.append("Запросы DNS уходят через \(country): провайдер может видеть, какие сайты вы открываете.") }
+          if !ok, let country { self.problems.append(t("DNS queries go through \(country): your provider may see which sites you open.", "Запросы DNS уходят через \(country): провайдер может видеть, какие сайты вы открываете.")) }
         } else {
-          self.add("DNS", [Line(mark: .info, label: "Сервер DNS", value: "не удалось определить")])
+          self.add("DNS", [Line(mark: .info, label: t("DNS server", "Сервер DNS"), value: t("could not detect", "не удалось определить"))])
         }
 
         let localZone = TimeZone.current
-        var zoneLines = [Line(mark: .info, label: "Часы Мака", value: "\(localZone.identifier)  UTC\(Self.offset(localZone))")]
+        var zoneLines = [Line(mark: .info, label: t("Mac clock", "Часы Мака"), value: "\(localZone.identifier)  UTC\(Self.offset(localZone))")]
         if let ipZoneName = hereFacts["timezone"] as? String, let ipZone = TimeZone(identifier: ipZoneName) {
           let same = ipZone.secondsFromGMT() == localZone.secondsFromGMT()
-          zoneLines.append(Line(mark: same ? .good : .warn, label: "Пояс по адресу IP", value: "\(ipZoneName)  UTC\(Self.offset(ipZone))"))
-          if !same { self.problems.append("Часовой пояс Мака (UTC\(Self.offset(localZone))) не совпадает с поясом страны IP (UTC\(Self.offset(ipZone))): сайты по нему замечают VPN.") }
+          zoneLines.append(Line(mark: same ? .good : .warn, label: t("Time zone of the IP", "Пояс по адресу IP"), value: "\(ipZoneName)  UTC\(Self.offset(ipZone))"))
+          if !same { self.problems.append(t("Your Mac’s time zone (UTC\(Self.offset(localZone))) differs from the IP’s (UTC\(Self.offset(ipZone))); sites can notice that.", "Часовой пояс Мака (UTC\(Self.offset(localZone))) не совпадает с поясом страны IP (UTC\(Self.offset(ipZone))); сайты могут это заметить.")) }
         }
         let region = Locale.current.region?.identifier ?? "?"
         let languages = Locale.preferredLanguages.prefix(3).joined(separator: ", ")
-        zoneLines.append(Line(mark: .info, label: "Регион и языки системы", value: "\(region) · \(languages)"))
-        self.add("Часовой пояс и язык", zoneLines)
+        zoneLines.append(Line(mark: .info, label: t("System region and languages", "Регион и языки системы"), value: "\(region) · \(languages)"))
+        self.add(t("Time zone and language", "Часовой пояс и язык"), zoneLines)
         self.isDone = true
         self.render()
       }
@@ -243,7 +243,7 @@ final class LeakWindow: NSObject, NSWindowDelegate {
     let gray = NSColor.secondaryLabelColor
 
     if isDone {
-      let verdict = problems.isEmpty ? "✓ Утечек не видно" : "⚠︎ Найдено: \(problems.count)"
+      let verdict = problems.isEmpty ? t("✓ No leaks found", "✓ Утечек не видно") : t("⚠︎ Found: ", "⚠︎ Найдено: ") + "\(problems.count)"
       out.append(NSAttributedString(string: verdict + "\n", attributes: [
         .font: NSFont.boldSystemFont(ofSize: 16),
         .foregroundColor: problems.isEmpty ? NSColor.systemGreen : NSColor.systemOrange,
@@ -253,7 +253,7 @@ final class LeakWindow: NSObject, NSWindowDelegate {
       }
       out.append(NSAttributedString(string: "\n"))
     } else {
-      out.append(NSAttributedString(string: "Проверяю…\n\n", attributes: [.font: head, .foregroundColor: gray]))
+      out.append(NSAttributedString(string: t("Checking…", "Проверяю…") + "\n\n", attributes: [.font: head, .foregroundColor: gray]))
     }
 
     for section in sections {

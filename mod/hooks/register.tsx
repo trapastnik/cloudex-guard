@@ -1,7 +1,7 @@
 import type { Register, EngineInterface, SessionRateLimit } from 'claude-code'
 
 // Каждый чат пишет сюда своё заполнение контекста, лимиты и состояние; строка меню
-// (ContextMeter.app) читает папку ~/.claude/context-meter. Модели мод ничего не отправляет.
+// (Claudex.app) читает папку ~/.claude/claudex. Модели мод ничего не отправляет.
 
 // При старте чата приложение Claude подключается не сразу: пробуем ещё столько раз с такой паузой.
 const RETRIES = 12
@@ -10,8 +10,9 @@ const RETRY_MS = 5000
 const POLL_MS = 10000
 // Запрос старше этого не выполняется: чат, проснувшийся через день, не должен получить старую просьбу.
 const REQUEST_TTL_MS = 10 * 60 * 1000
+// Текст просьбы приходит в запросе (на языке интерфейса); этот — если его там нет.
 const CLEANUP_TEXT =
-  'У тебя достаточно большой контекст, когда сможешь, пожалуйста сохрани все подробно в документации напиши подробный Handoff и короткий текст для вставки в новый чат после чего будем тебя чистить.'
+  'Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text to paste into a new chat — after that we will clear this chat.'
 // Отметка «чат запущен»: спящему чату просьбу 🧹 приходится вставлять руками.
 const BEAT_MS = 60000
 
@@ -48,7 +49,7 @@ async function inDesktop($: EngineInterface): Promise<boolean> {
 
 async function dataDir($: EngineInterface): Promise<string> {
   if (dir === undefined) {
-    dir = `${(await $.env.get('HOME')) ?? ''}/.claude/context-meter`
+    dir = `${(await $.env.get('HOME')) ?? ''}/.claude/claudex`
   }
   return dir
 }
@@ -124,14 +125,16 @@ async function poll($: EngineInterface) {
     if (!(await $.fs.exists(request))) {
       return
     }
-    const createdAt = Number(JSON.parse(String(await $.fs.read(request))).createdAt)
+    const asked = JSON.parse(String(await $.fs.read(request)))
+    const createdAt = Number(asked.createdAt)
+    const text = typeof asked.text === 'string' && asked.text.trim() !== '' ? asked.text.slice(0, 2000) : CLEANUP_TEXT
     const doneAt = (await $.fs.exists(ack)) ? Number(String(await $.fs.read(ack))) : 0
     const done = Number.isFinite(doneAt) ? doneAt : 0
     if (!Number.isFinite(createdAt) || createdAt <= done || now - createdAt > REQUEST_TTL_MS) {
       return
     }
     await $.fs.write(ack, String(createdAt))
-    void $.prompt.submit({ text: CLEANUP_TEXT })
+    void $.prompt.submit({ text })
   } catch {
     // Файл в процессе записи — посмотрим в следующий раз.
   }

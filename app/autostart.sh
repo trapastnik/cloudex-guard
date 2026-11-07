@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Включает (или с аргументом off — выключает) запуск ContextMeter при входе в систему.
+# Включает (или с аргументом off — выключает) запуск Claudex при входе в систему.
 # Агент вызывает /usr/bin/open, как двойной клик: прямой запуск самоподписанного файла
 # агентом macOS блокирует после каждой пересборки (Launch Constraint Violation).
 set -e
-LABEL=io.github.trapastnik.context-meter
+LABEL=io.github.trapastnik.claudex
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 if [ "${1:-on}" = "off" ]; then
@@ -22,10 +22,10 @@ cat > "$PLIST" <<PLIST
   <array>
     <string>/usr/bin/open</string>
     <string>-g</string>
-    <string>$HOME/Applications/ContextMeter.app</string>
+    <string>$HOME/Applications/Claudex.app</string>
   </array>
   <key>RunAtLoad</key><true/>
-  <!-- Раз в минуту: запущенному ContextMeter open ничего не делает, упавший — поднимает,
+  <!-- Раз в минуту: запущенному Claudex open ничего не делает, упавший — поднимает,
        и он сразу отпускает программы, которые заморозил до сбоя. -->
   <key>StartInterval</key><integer>60</integer>
 </dict>

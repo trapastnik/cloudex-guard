@@ -1,4 +1,4 @@
-// Раздел «Сеть» в меню ContextMeter: адрес и страна, заморозка, настройки защиты.
+// Раздел «Сеть» в меню Claudex: адрес и страна, заморозка, настройки защиты.
 
 import AppKit
 
@@ -33,7 +33,7 @@ extension App {
       status.append(NSAttributedString(string: "\(flag(general.country)) \(general.country)  ", attributes: [.font: NSFont.boldSystemFont(ofSize: 13)]))
       status.append(NSAttributedString(string: general.ip, attributes: [.font: mono]))
     } else {
-      status.append(NSAttributedString(string: guardian.isChecking ? "Проверяю адрес…" : "Адрес не определён — нет связи?"))
+      status.append(NSAttributedString(string: guardian.isChecking ? t("Checking your address…", "Проверяю адрес…") : t("Address unknown — offline?", "Адрес не определён — нет связи?")))
     }
     if let at = guardian.checkedAt {
       status.append(NSAttributedString(string: "   \(ago(at))", attributes: [.foregroundColor: gray, .font: NSFont.menuFont(ofSize: 12)]))
@@ -43,11 +43,11 @@ extension App {
     // Раздельная маршрутизация и IPv6 — отдельной строкой, только когда есть что сказать.
     var notes: [String] = []
     if let claude = guardian.views["claude.ai"], let general = guardian.general, general.country != claude.country {
-      notes.append("сервисы IP видят \(flag(general.country)) \(general.country) — VPN ведёт трафик разными путями")
+      notes.append(t("IP services see \(flag(general.country)) \(general.country) — your VPN splits traffic", "сервисы IP видят \(flag(general.country)) \(general.country) — VPN ведёт трафик разными путями"))
     }
-    if let other = guardian.other { notes.append("второй сервис видит другой адрес: \(flag(other.country)) \(other.country) \(other.ip)") }
+    if let other = guardian.other { notes.append(t("a second service sees another address: ", "второй сервис видит другой адрес: ") + "\(flag(other.country)) \(other.country) \(other.ip)") }
     if let bypass = guardian.bypass, bypass.country != guardian.shownCountry {
-      notes.append("мимо прокси (терминал, Claude Code): \(flag(bypass.country)) \(bypass.country) \(bypass.ip)")
+      notes.append(t("outside the proxy (terminal, Claude Code): ", "мимо прокси (терминал, Claude Code): ") + "\(flag(bypass.country)) \(bypass.country) \(bypass.ip)")
     }
     if let v6 = guardian.v6 { notes.append("IPv6: \(flag(v6.country)) \(v6.country) \(v6.ip)") }
     for note in notes {
@@ -55,21 +55,21 @@ extension App {
     }
 
     if !guardian.frozen.isEmpty {
-      let line = "❄︎ Заморожено: \(guardian.frozenApps.joined(separator: ", ")) — отпущу, когда адрес станет разрешённым"
+      let line = "❄︎ " + t("Paused: ", "Заморожено: ") + guardian.frozenApps.joined(separator: ", ") + t(" — resumes when your address is allowed again", " — отпущу, когда адрес станет разрешённым")
       menu.addItem(info(NSAttributedString(string: line, attributes: [.foregroundColor: NSColor.systemRed])))
-      menu.addItem(action("Разморозить и не трогать 15 минут", #selector(pause15)))
+      menu.addItem(action(t("Resume and leave alone for 15 minutes", "Разморозить и не трогать 15 минут"), #selector(pause15)))
     } else if guardian.allowed.isEmpty || guardian.guarded.isEmpty {
-      menu.addItem(info(NSAttributedString(string: "Заморозка выключена: выберите страны и программы в «Защите»",
+      menu.addItem(info(NSAttributedString(string: t("Pausing is off: pick countries and apps under “Network guard”", "Заморозка выключена: выберите страны и программы в «Защите»"),
                                            attributes: [.foregroundColor: gray, .font: NSFont.menuFont(ofSize: 12)])))
     } else if let until = guardian.pausedUntil, until > Date() {
-      menu.addItem(info(NSAttributedString(string: "Защита на паузе до \(Self.clock(until))", attributes: [.foregroundColor: NSColor.systemOrange])))
+      menu.addItem(info(NSAttributedString(string: t("Guard paused until ", "Защита на паузе до ") + Self.clock(until), attributes: [.foregroundColor: NSColor.systemOrange])))
     }
 
-    let protection = NSMenuItem(title: "Защита", action: nil, keyEquivalent: "")
+    let protection = NSMenuItem(title: t("Network guard", "Защита"), action: nil, keyEquivalent: "")
     protection.submenu = protectionMenu()
     menu.addItem(protection)
-    menu.addItem(action("Проверить адрес сейчас", #selector(checkNow)))
-    menu.addItem(action("Как нас видят…", #selector(showLeaks)))
+    menu.addItem(action(t("Check address now", "Проверить адрес сейчас"), #selector(checkNow)))
+    menu.addItem(action(t("How others see us…", "Как нас видят…"), #selector(showLeaks)))
     let speed = action(SpeedTest.shared.summary, #selector(runSpeed))
     speed.isEnabled = !SpeedTest.shared.isRunning
     menu.addItem(speed)
@@ -81,12 +81,12 @@ extension App {
     let menu = NSMenu()
     menu.autoenablesItems = false
 
-    let enabled = action("Заморозка включена", #selector(toggleEnabled))
+    let enabled = action(t("Pause apps on a wrong network", "Заморозка включена"), #selector(toggleEnabled))
     enabled.state = guardian.isEnabled ? .on : .off
     menu.addItem(enabled)
 
     menu.addItem(.separator())
-    menu.addItem(header("Программы — замораживаются вместе со всем, что запустили"))
+    menu.addItem(header(t("Apps — paused together with everything they started", "Программы — замораживаются вместе со всем, что запустили")))
     let guarded = guardian.guarded
     var offered = Guarded.installed()
     for app in guarded where !offered.contains(where: { $0.path == app.path }) { offered.append(app) }
@@ -98,10 +98,10 @@ extension App {
       item.image?.size = NSSize(width: 16, height: 16)
       menu.addItem(item)
     }
-    menu.addItem(action("Добавить программу…", #selector(addApp)))
+    menu.addItem(action(t("Add app…", "Добавить программу…"), #selector(addApp)))
 
     menu.addItem(.separator())
-    menu.addItem(header("Разрешённые страны — с них программы работают"))
+    menu.addItem(header(t("Allowed countries — apps run only from these", "Разрешённые страны — с них программы работают")))
     var countries = guardian.allowed
     if let shown = guardian.shownCountry { countries.insert(shown) }
     for view in guardian.views.values { countries.insert(view.country) }
@@ -115,10 +115,10 @@ extension App {
 
     menu.addItem(.separator())
     if let until = guardian.pausedUntil, until > Date() {
-      menu.addItem(action("Снять паузу (сейчас до \(Self.clock(until)))", #selector(unpause)))
+      menu.addItem(action(t("End pause (until ", "Снять паузу (сейчас до ") + Self.clock(until) + ")", #selector(unpause)))
     } else {
-      menu.addItem(action("Пауза на 15 минут", #selector(pause15)))
-      menu.addItem(action("Пауза на 1 час", #selector(pause60)))
+      menu.addItem(action(t("Pause guard for 15 minutes", "Пауза на 15 минут"), #selector(pause15)))
+      menu.addItem(action(t("Pause guard for 1 hour", "Пауза на 1 час"), #selector(pause60)))
     }
     return menu
   }
@@ -163,13 +163,13 @@ extension App {
     panel.directoryURL = URL(fileURLWithPath: "/Applications")
     panel.allowedContentTypes = [.application]
     panel.allowsMultipleSelection = false
-    panel.prompt = "Защищать"
+    panel.prompt = t("Guard", "Защищать")
     NSApp.activate(ignoringOtherApps: true)
     guard panel.runModal() == .OK, let url = panel.url else { return }
     if let reason = Guarded.refusal(for: url) {
       let alert = NSAlert()
-      alert.messageText = "Эту программу защищать нельзя"
-      alert.informativeText = reason + " Замороженная, она может повесить Мак или не дать VPN переподключиться — тогда программы не оттают."
+      alert.messageText = t("This app can’t be guarded", "Эту программу защищать нельзя")
+      alert.informativeText = reason + t(" If paused, it could hang your Mac or stop the VPN from reconnecting — and apps would never resume.", " Замороженная, она может повесить Мак или не дать VPN переподключиться — тогда программы не оттают.")
       alert.runModal()
       return
     }

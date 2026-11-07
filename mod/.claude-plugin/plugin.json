@@ -1,10 +1,10 @@
 {
-  "name": "context-meter",
-  "version": "0.4.0",
-  "description": "Writes each chat's context window fill to ~/.claude/context-meter for the ContextMeter menu bar app",
+  "name": "claudex",
+  "version": "1.0.0",
+  "description": "Claudex: writes each Claude Code chat's context fill, plan limits and status to ~/.claude/claudex for the Claudex menu bar app",
   "license": "MIT",
   "author": {
     "name": "trapastnik"
   },
-  "repository": "https://github.com/trapastnik/context-meter"
+  "repository": "https://github.com/trapastnik/claudex"
 }

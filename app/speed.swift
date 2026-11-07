@@ -97,10 +97,10 @@ final class SpeedTest: @unchecked Sendable {  // состояние трогае
 
   // Одна строка для меню: «↓48 ↑12 Мбит/с · Claude 180 · API 210 · ChatGPT 160 мс · 12:05».
   var summary: String {
-    if isRunning { return "Тест скорости: замеряю…" }
-    guard let last else { return "Тест скорости" }
-    let speed = (last.down.map { String(format: "↓%.0f", $0) } ?? "↓—") + " " + (last.up.map { String(format: "↑%.0f", $0) } ?? "↑—") + " Мбит/с"
+    if isRunning { return t("Speed test: measuring…", "Тест скорости: замеряю…") }
+    guard let last else { return t("Speed test", "Тест скорости") }
+    let speed = (last.down.map { String(format: "↓%.0f", $0) } ?? "↓—") + " " + (last.up.map { String(format: "↑%.0f", $0) } ?? "↑—") + t(" Mbps", " Мбит/с")
     let pings = last.pings.map { "\($0.0) \($0.1.map(String.init) ?? "—")" }.joined(separator: " · ")
-    return "\(speed) · \(pings) мс · \(App.clock(last.at))"
+    return "\(speed) · \(pings) \(t("ms", "мс")) · \(App.clock(last.at))"
   }
 }
