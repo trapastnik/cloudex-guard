@@ -3,7 +3,7 @@
 <p align="center"><b>Порядок в чатах Claude Code — и подключение там, где вы его ждёте.</b><br>
 Небольшое бесплатное приложение для строки меню macOS к Claude Code в десктопном приложении Claude.</p>
 
-<p align="center"><a href="https://github.com/trapastnik/cloudex-guard/releases/latest">Скачать</a> · <a href="#установка">Установка</a> · <a href="#ваши-ключи-и-данные-остаются-вашими">Приватность</a> · <a href="README.md">English</a> · <a href="https://medfab-dev.tech/cloudex-guard/">Сайт</a></p>
+<p align="center"><a href="https://github.com/trapastnik/cloudex-guard/releases/latest">Скачать</a> · <a href="#установка">Установка</a> · <a href="#ваши-ключи-и-данные-остаются-вашими">Приватность</a> · <a href="README.md">English</a> · <a href="https://medfab-dev.tech/ru/cloudex-guard/">Сайт</a></p>
 
 > Cloudex Guard — независимый проект с открытым кодом. Anthropic его не делала, не одобряла и не поддерживает. Claude и Claude Code — товарные знаки Anthropic.
 
