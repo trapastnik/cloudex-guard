@@ -24,14 +24,16 @@ say() { printf '\033[1m%s\033[0m\n' "$*"; }
 fail() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 
 # Asks on the terminal even when the script itself arrives through a pipe.
-# CLOUDEX_YES=1 answers yes without asking (unattended installs).
+# CLOUDEX_YES=1 answers yes without asking (unattended installs). Without a terminal to ask,
+# the answer is no: settings.json is never changed without an explicit yes.
 confirm() {
   [ "${CLOUDEX_YES:-}" = "1" ] && return 0
-  if [ -r /dev/tty ]; then
+  if ( : > /dev/tty ) 2>/dev/null; then
     printf '%s [Y/n] ' "$1" > /dev/tty
-    read -r answer < /dev/tty || answer=""
-    case "$answer" in [nN]*) return 1 ;; esac
-    return 0
+    if read -r answer < /dev/tty; then
+      case "$answer" in [nN]*) return 1 ;; esac
+      return 0
+    fi
   fi
   return 1
 }
@@ -130,7 +132,10 @@ install() {
   for file in CloudexGuard-macos.zip cloudex-guard-mod.zip SHA256SUMS.txt; do
     curl -fsSL "$BASE/$file" -o "$tmp/$file"
   done
-  (cd "$tmp" && shasum -a 256 -c SHA256SUMS.txt >/dev/null) || fail "Checksum mismatch — the download is damaged or altered. Nothing was installed."
+  # Сверяются ровно скачанные файлы: обе строки обязаны быть в SHA256SUMS.txt и совпасть.
+  (cd "$tmp" && grep -E "  (CloudexGuard-macos\.zip|cloudex-guard-mod\.zip)\$" SHA256SUMS.txt > wanted.txt \
+    && [ "$(wc -l < wanted.txt)" -eq 2 ] && shasum -a 256 -c wanted.txt >/dev/null) \
+    || fail "Checksum mismatch — the download is damaged or altered. Nothing was installed."
 
   stop_running
   mkdir -p "$APPS" "$MOD"
