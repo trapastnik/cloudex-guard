@@ -1,5 +1,5 @@
 // Язык интерфейса: английский, а если система на русском — русский.
-// Принудительно: defaults write io.github.trapastnik.claudex language ru (или en).
+// Принудительно: defaults write io.github.trapastnik.cloudex-guard language ru (или en).
 
 import Foundation
 

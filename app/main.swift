@@ -1,10 +1,10 @@
-// Claudex — строка меню с заполнением контекста всех чатов Claude.
-// Данные пишет мод ~/.claude/mods/claudex: по файлу на чат в ~/.claude/claudex.
+// Cloudex Guard — строка меню с заполнением контекста всех чатов Claude.
+// Данные пишет мод ~/.claude/mods/cloudex-guard: по файлу на чат в ~/.claude/cloudex-guard.
 
 import AppKit
 
 let dataDir = FileManager.default.homeDirectoryForCurrentUser
-  .appendingPathComponent(".claude/claudex")
+  .appendingPathComponent(".claude/cloudex-guard")
 // Обновление идёт по событию от macOS, когда мод пишет файл; таймер — редкая подстраховка.
 let fallbackSeconds = 60.0
 // Чаты, не отвечавшие дольше, уходят в подменю «Давно не активные»; ещё дольше — скрыты.
@@ -277,7 +277,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   var stream: FSEventStreamRef?
 
   func applicationDidFinishLaunching(_ note: Notification) {
-    item.autosaveName = "Claudex"
+    item.autosaveName = "Cloudex Guard"
     item.menu = NSMenu()
     item.menu?.delegate = self
     // Строки лимитов без действия должны выглядеть обычными, а не серыми.
@@ -291,6 +291,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     timer.tolerance = fallbackSeconds / 2
     RunLoop.main.add(timer, forMode: .common)
     pruneOldFiles()
+    Setup.onLaunch()
   }
 
   // Выход через меню приложений, выход из системы, quit от другой программы — отпускаем замороженных.
@@ -360,6 +361,10 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let active = chats.filter { -$0.updated.timeIntervalSinceNow < staleDays * 86400 }
     let stale = chats.filter { -$0.updated.timeIntervalSinceNow >= staleDays * 86400 }
 
+    if !Setup.isConnected && Setup.modSource != nil {
+      menu.addItem(withTitle: t("Connect to Claude Code…", "Подключить к Claude Code…"), action: #selector(connect), keyEquivalent: "").target = self
+      menu.addItem(.separator())
+    }
     addNetworkSection(to: menu)
 
     let limits = loadLimits()
@@ -402,8 +407,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     menu.addItem(.separator())
     menu.addItem(withTitle: t("Open data folder", "Открыть папку данных"), action: #selector(openDir), keyEquivalent: "").target = self
-    menu.addItem(withTitle: t("Support Claudex ♥", "Поддержать Claudex ♥"), action: #selector(support), keyEquivalent: "").target = self
-    menu.addItem(withTitle: t("Quit Claudex", "Выйти из Claudex"), action: #selector(quit), keyEquivalent: "q").target = self
+    menu.addItem(withTitle: t("Support Cloudex Guard ♥", "Поддержать Cloudex Guard ♥"), action: #selector(support), keyEquivalent: "").target = self
+    menu.addItem(withTitle: t("Quit Cloudex Guard", "Выйти из Cloudex Guard"), action: #selector(quit), keyEquivalent: "q").target = self
   }
 
   // «5 ч      ▰▱▱▱▱▱▱▱▱▱   5%  2 ч 58 мин»
@@ -458,6 +463,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     return createdAt > done && age < 600  // мод не выполняет просьбы старше 10 минут
   }
 
+  @objc func connect() { Setup.ask() }
+
   @objc func support() {
     if let url = URL(string: supportURL) { NSWorkspace.shared.open(url) }
   }
@@ -476,13 +483,13 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
 // Место значка по умолчанию — правее, ближе к часам: левые значки при переполненной
 // строке меню уходят под вырез экрана и пропадают. Перетаскивание с ⌘ macOS запоминает
 // под тем же ключом, и тогда эта настройка его не трогает.
-let supportURL = "https://github.com/trapastnik/claudex#support"
-let positionKey = "NSStatusItem Preferred Position Claudex"
+let supportURL = "https://github.com/trapastnik/cloudex-guard#support"
+let positionKey = "NSStatusItem Preferred Position Cloudex Guard"
 if UserDefaults.standard.object(forKey: positionKey) == nil {
   UserDefaults.standard.set(260.0, forKey: positionKey)
 }
 
-// Служебная проверка из терминала: Claudex --speedtest
+// Служебная проверка из терминала: Cloudex Guard --speedtest
 if CommandLine.arguments.contains("--speedtest") {
   SpeedTest.shared.onChange = {
     guard !SpeedTest.shared.isRunning else { return }

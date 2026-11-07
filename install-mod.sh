@@ -1,9 +1,9 @@
 #!/bin/zsh
-# Копирует мод в ~/.claude/mods/claudex. Подключить его один раз — блоком env
+# Копирует мод в ~/.claude/mods/cloudex-guard. Подключить его один раз — блоком env
 # в ~/.claude/settings.json (см. README), после этого он работает в каждом чате.
 set -e
 cd "$(dirname "$0")"
-DEST="$HOME/.claude/mods/claudex"
+DEST="$HOME/.claude/mods/cloudex-guard"
 # Клон, лежащий прямо в папке мода, rsync --delete стёр бы целиком — отказываемся.
 HERE="$(pwd -P)"
 if [ "$HERE" = "$DEST" ] || [ "${HERE#$DEST/}" != "$HERE" ] || [ "${DEST#$HERE/}" = "mod" ]; then
@@ -13,7 +13,7 @@ fi
 mkdir -p "$DEST"
 rsync -a --delete --exclude '.claude-plugin/types' mod/ "$DEST/"
 echo "Мод скопирован в $DEST"
-if ! grep -q "mods/claudex" "$HOME/.claude/settings.json" 2>/dev/null; then
+if ! grep -q "mods/cloudex-guard" "$HOME/.claude/settings.json" 2>/dev/null; then
   echo
   echo "Осталось подключить его: добавьте в ~/.claude/settings.json на верхний уровень"
   echo

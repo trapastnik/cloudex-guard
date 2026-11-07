@@ -224,11 +224,11 @@ struct Guarded: Codable, Hashable {
       || path.hasPrefix(own + "/")
   }
 
-  // Почему эту программу нельзя защищать: системная, сам Claudex или VPN —
+  // Почему эту программу нельзя защищать: системная, сам Cloudex Guard или VPN —
   // замороженный VPN-клиент не сможет переподключиться, и программы не оттают никогда.
   static func refusal(for url: URL) -> String? {
     let path = url.path
-    if isSystem(path + "/") || path == Bundle.main.bundlePath { return t("It is a system app or Claudex itself.", "Это системная программа или сам Claudex.") }
+    if isSystem(path + "/") || path == Bundle.main.bundlePath { return t("It is a system app or Cloudex Guard itself.", "Это системная программа или сам Cloudex Guard.") }
     let contents = url.appendingPathComponent("Contents")
     if FileManager.default.fileExists(atPath: contents.appendingPathComponent("Library/SystemExtensions").path) {
       return t("Looks like a VPN or network filter: the app has a system extension.", "Похоже на VPN или сетевой фильтр: у программы есть системное расширение.")

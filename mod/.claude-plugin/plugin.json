@@ -1,10 +1,10 @@
 {
-  "name": "claudex",
-  "version": "1.0.1",
-  "description": "Claudex: writes each Claude Code chat's context fill, plan limits and status to ~/.claude/claudex for the Claudex menu bar app",
+  "name": "cloudex-guard",
+  "version": "1.1.0",
+  "description": "Cloudex Guard: writes each Claude Code chat's context fill, plan limits and status to ~/.claude/cloudex-guard for the Cloudex Guard menu bar app",
   "license": "MIT",
   "author": {
     "name": "trapastnik"
   },
-  "repository": "https://github.com/trapastnik/claudex"
+  "repository": "https://github.com/trapastnik/cloudex-guard"
 }

@@ -1,7 +1,7 @@
 import type { Register, EngineInterface, SessionRateLimit } from 'claude-code'
 
 // Каждый чат пишет сюда своё заполнение контекста, лимиты и состояние; строка меню
-// (Claudex.app) читает папку ~/.claude/claudex. Модели мод ничего не отправляет.
+// (Cloudex Guard.app) читает папку ~/.claude/cloudex-guard. Модели мод ничего не отправляет.
 
 // При старте чата приложение Claude подключается не сразу: пробуем ещё столько раз с такой паузой.
 const RETRIES = 12
@@ -49,7 +49,7 @@ async function inDesktop($: EngineInterface): Promise<boolean> {
 
 async function dataDir($: EngineInterface): Promise<string> {
   if (dir === undefined) {
-    dir = `${(await $.env.get('HOME')) ?? ''}/.claude/claudex`
+    dir = `${(await $.env.get('HOME')) ?? ''}/.claude/cloudex-guard`
   }
   return dir
 }
