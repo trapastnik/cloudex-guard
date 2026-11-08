@@ -58,7 +58,7 @@ def audio_args(wav, dur):
     """Входы и фильтр звука для куска длиной dur: реплика с задержкой, дальше тишина."""
     if wav:
         ms = int(VOICE_DELAY * 1000)
-        return ["-i", str(wav)], f"[{{n}}:a]aresample=48000,adelay={ms},apad,atrim=0:{dur:.3f},aformat=channel_layouts=stereo[a]"
+        return ["-i", str(wav)], f"[{{n}}:a]aresample=48000,adelay={ms}:all=1,apad,atrim=0:{dur:.3f},aformat=channel_layouts=stereo[a]"
     return ["-f", "lavfi", "-t", f"{dur:.3f}", "-i", "anullsrc=r=48000:cl=stereo"], "[{n}:a]anull[a]"
 
 
