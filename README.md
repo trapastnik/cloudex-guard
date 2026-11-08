@@ -5,6 +5,8 @@ A small, free macOS menu bar app for Claude Code in the Claude desktop app.</p>
 
 <p align="center"><a href="https://github.com/trapastnik/cloudex-guard/releases/latest">Download</a> · <a href="#install">Install</a> · <a href="#your-keys-and-data-stay-yours">Privacy</a> · <a href="README.ru.md">Русский</a> · <a href="https://medfab-dev.tech/cloudex-guard/">Website</a></p>
 
+<p align="center"><img src="assets/demo.gif" alt="Cloudex Guard menu: context of every chat, chats waiting for you, handoff before clearing" width="442"><br><sub>Recorded in the app’s demo mode (<code>app/demo.sh</code>): made-up chats, documentation IP.</sub></p>
+
 > Cloudex Guard is an independent open-source project. It is not made, endorsed or supported by Anthropic. Claude and Claude Code are trademarks of Anthropic.
 
 ## What it does
