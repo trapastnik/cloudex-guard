@@ -120,10 +120,22 @@ def demo(png, clip, t0, t1, place, out, first, last, wav=None, dur=None):
          str(out)])
 
 
-def build(lang, fmt):
+# Короткая версия для Reels/TikTok (~30 с): зацепка → карта контекста → 🧹 → заморозка → возврат → ссылка.
+SHORT = [
+    ("card", "hook", 3.0),
+    ("demo", "d1a", "demo", 0.0, 4.5),
+    ("demo", "d1c", "demo", 10.9, 15.4),
+    ("demo", "d2b", "guard", 4.1, 9.05),
+    ("demo", "d2c", "guard", 9.05, 13.95),
+    ("card", "cta", 3.5),
+]
+
+
+def build(lang, fmt, story=None, suffix=None):
+    STORY = story or globals()["STORY"]
     parts = []
     for i, item in enumerate(STORY):
-        out = WORK / f"{lang}-{fmt}-{i:02d}.mp4"
+        out = WORK / f"{lang}-{fmt}{suffix or ''}-{i:02d}.mp4"
         if item[0] == "card":
             _, scene, dur = item
             wav, length = voice(lang, scene)
@@ -138,9 +150,9 @@ def build(lang, fmt):
             demo(shot(scene, lang, fmt), clip, t0, t1, PLACE[fmt][clip], out, first, last,
                  wav, VOICE_DELAY + length + VOICE_TAIL)
         parts.append(out)
-    lst = WORK / f"{lang}-{fmt}.txt"
+    lst = WORK / f"{lang}-{fmt}{suffix or ''}.txt"
     lst.write_text("".join(f"file '{p}'\n" for p in parts))
-    name = OUT / f"cloudex-guard-{lang}-{'youtube' if fmt == 'h' else 'vertical'}.mp4"
+    name = OUT / f"cloudex-guard-{lang}-{suffix.strip('-') if suffix else ('youtube' if fmt == 'h' else 'vertical')}.mp4"
     run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
          "-c:v", "libx264", "-crf", "20", "-preset", "slow", "-pix_fmt", "yuv420p", "-r", str(FPS),
          "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
@@ -151,6 +163,11 @@ def build(lang, fmt):
 if __name__ == "__main__":
     langs = [a for a in sys.argv[1:] if a in ("en", "ru")] or ["en", "ru"]
     fmts = [a for a in sys.argv[1:] if a in ("h", "v")] or ["h", "v"]
+    if "short" in sys.argv[1:]:  # только короткая вертикаль: video/build.py short [en|ru]
+        WORK.mkdir(parents=True, exist_ok=True)
+        for lang in langs:
+            build(lang, "v", SHORT, "-short")
+        sys.exit(0)
     WORK.mkdir(parents=True, exist_ok=True)
     for lang in langs:
         for fmt in fmts:
