@@ -1,14 +1,19 @@
 #!/bin/zsh
 # Демо для записи GIF и скриншотов: настоящее приложение с выдуманными чатами (см. demo.swift).
 #
-#   zsh app/demo.sh        — английский интерфейс
-#   zsh app/demo.sh ru     — русский
+#   zsh app/demo.sh        — чаты: «Ждут вас», 🧹 (английский интерфейс)
+#   zsh app/demo.sh ru     — то же на русском
+#   zsh app/demo.sh net    — страж сети: VPN прыгает в другую страну → ❄︎ заморозка → адрес вернулся
+#                            (фазы переключаются Enter в этом окне; настоящие программы не трогаются)
 #
 # На время записи настоящий Cloudex Guard выключается (заморозка отпускается, автозапуск
 # приостанавливается), чтобы в строке меню был один значок без ваших чатов и адреса.
 # Enter в этом окне — демо закрывается, настоящее приложение и автозапуск возвращаются.
 set -e
 cd "$(dirname "$0")"
+LANG_UI=en; NET=0
+for a in "$@"; do case "$a" in ru|en) LANG_UI=$a;; net) NET=1;; esac; done
+PHASE="$(getconf DARWIN_USER_TEMP_DIR)cloudex-guard-demo/net-phase"
 APP="${TMPDIR:-/tmp}/Cloudex Guard Demo.app"
 ID=io.github.trapastnik.cloudex-guard.demo
 AGENT="$HOME/Library/LaunchAgents/io.github.trapastnik.cloudex-guard.plist"
@@ -41,8 +46,28 @@ osascript -e 'tell application id "io.github.trapastnik.cloudex-guard" to quit' 
 sleep 1
 
 pkill -x CloudexGuardDemo 2>/dev/null || true
-open -g --env CLOUDEX_DEMO=1 --env "CLOUDEX_DEMO_LANG=${1:-en}" "$APP"
+open -g --env CLOUDEX_DEMO=1 --env "CLOUDEX_DEMO_LANG=$LANG_UI" "$APP"
+sleep 2
 
+if [ "$NET" = 1 ]; then
+  echo ok > "$PHASE"
+  cat <<'TXT'
+
+Демо стража сети запущено: в строке меню 🇺🇸 ● 84% ✋1 — VPN в США, всё разрешено.
+Запись: ⌘⇧5 → «Записать выбранную область» (строка меню справа и место под меню) → «Записать».
+  1. Открыть меню, навести на «Network guard» — видны программы (Claude, ChatGPT) и разрешённая страна 🇺🇸 US.
+     Закрыть меню (Esc).
+  2. Вернуться в это окно и нажать Enter — «VPN переподключился в Бразилию»: в строке меню красное ❄︎BR.
+  3. Открыть меню — красная строка «❄︎ Paused: ChatGPT, Claude…». Закрыть меню.
+  4. Снова Enter здесь — адрес вернулся: в строке меню снова 🇺🇸. Открыть меню на секунду, закрыть.
+  5. Остановить запись (■ в строке меню). Пришлите .mov — сделаю GIF.
+
+TXT
+  read "?Enter — сеть прыгнула в Бразилию (❄︎)… "
+  echo jump > "$PHASE"
+  read "?Enter — адрес вернулся (🇺🇸)… "
+  echo ok > "$PHASE"
+else
 cat <<'TXT'
 
 Демо запущено: в строке меню значок с 84% и ✋1.
@@ -54,6 +79,7 @@ cat <<'TXT'
 Сохранённый .mov пришлите — переведу в GIF.
 
 TXT
+fi
 read "?Enter — закрыть демо и вернуть настоящий Cloudex Guard… "
 
 pkill -x CloudexGuardDemo 2>/dev/null || true

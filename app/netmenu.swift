@@ -5,7 +5,7 @@ import AppKit
 extension App {
   // Начало заголовка в строке меню: флаг страны; ⚠︎ — адрес не разрешён; ❄︎ — программы заморожены.
   func networkTitle() -> NSAttributedString {
-    if isDemo { return NSAttributedString(string: flag(Demo.country) + " ") }
+    if isDemo { return Demo.networkTitle() }
     let guardian = NetGuard.shared
     let country = guardian.shownCountry ?? "?"
     if !guardian.frozen.isEmpty {

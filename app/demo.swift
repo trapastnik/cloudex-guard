@@ -57,17 +57,88 @@ enum Demo {
     if let data = try? JSONSerialization.data(withJSONObject: object) { try? data.write(to: url) }
   }
 
-  // Сетевая часть меню в демо: только пример адреса, без действий.
+  // Сценарий «сеть» для записи стража: demo.sh net пишет сюда ok / jump и переключает фазу по Enter.
+  // Это только отображение: настоящие программы демо не замораживает.
+  static let phaseFile = dir.appendingPathComponent("net-phase")
+  static let jumpCountry = "BR"
+  static let jumpIP = "198.51.100.7"
+  static let guardedApps = [("Claude", "com.anthropic.claudefordesktop"), ("ChatGPT", "com.openai.chat")]
+
+  static var isJumped: Bool {
+    (try? String(contentsOf: phaseFile, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines) == "jump"
+  }
+
+  // Начало заголовка в строке меню — как у настоящего стража: флаг или красное «❄︎BR».
+  static func networkTitle() -> NSAttributedString {
+    if isJumped {
+      return NSAttributedString(string: "❄︎\(jumpCountry) ", attributes: [
+        .foregroundColor: NSColor.systemRed, .font: NSFont.boldSystemFont(ofSize: 13),
+      ])
+    }
+    return NSAttributedString(string: flag(country) + " ")
+  }
+
+  // Сетевая часть меню в демо: те же строки, что у настоящего стража, но без действий.
   static func addNetworkSection(to menu: NSMenu) {
-    let text = NSMutableAttributedString(string: "\(flag(country)) \(country)  ", attributes: [.font: NSFont.boldSystemFont(ofSize: 13)])
-    text.append(NSAttributedString(string: ip, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]))
-    text.append(NSAttributedString(string: "   1 " + t("min", "мин"), attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.menuFont(ofSize: 12)]))
-    for item in [text, NSAttributedString(string: t("Network guard", "Защита")), NSAttributedString(string: t("How others see us…", "Как нас видят…"))] {
-      let menuItem = NSMenuItem(title: item.string, action: nil, keyEquivalent: "")
-      menuItem.attributedTitle = item
-      menuItem.isEnabled = true
-      menu.addItem(menuItem)
+    let jumped = isJumped
+    let text = NSMutableAttributedString(string: "\(flag(jumped ? jumpCountry : country)) \(jumped ? jumpCountry : country)  ", attributes: [.font: NSFont.boldSystemFont(ofSize: 13)])
+    text.append(NSAttributedString(string: jumped ? jumpIP : ip, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]))
+    text.append(NSAttributedString(string: "   0 " + t("min", "мин"), attributes: [.foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.menuFont(ofSize: 12)]))
+    menu.addItem(plain(text))
+    if jumped {
+      let names = guardedApps.map(\.0).sorted().joined(separator: ", ")
+      let line = "❄︎ " + t("Paused: ", "Заморожено: ") + names + t(" — resumes when your address is allowed again", " — отпущу, когда адрес станет разрешённым")
+      menu.addItem(plain(NSAttributedString(string: line, attributes: [.foregroundColor: NSColor.systemRed])))
+      menu.addItem(plain(NSAttributedString(string: t("Resume and leave alone for 15 minutes", "Разморозить и не трогать 15 минут"))))
+    }
+    let protection = NSMenuItem(title: t("Network guard", "Защита"), action: nil, keyEquivalent: "")
+    protection.submenu = protectionMenu()
+    menu.addItem(protection)
+    menu.addItem(plain(NSAttributedString(string: t("How others see us…", "Как нас видят…"))))
+    menu.addItem(.separator())
+  }
+
+  // Подменю «Защита» как у настоящего приложения: программы и разрешённые страны с галочками.
+  static func protectionMenu() -> NSMenu {
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    menu.addItem(checked(t("Pause apps on a wrong network", "Заморозка включена"), true))
+    menu.addItem(.separator())
+    menu.addItem(header(t("Apps — paused together with everything they started", "Программы — замораживаются вместе со всем, что запустили")))
+    for (name, bundleID) in guardedApps {
+      let item = checked(name, true)
+      if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+        item.image = NSWorkspace.shared.icon(forFile: url.path)
+        item.image?.size = NSSize(width: 16, height: 16)
+      }
+      menu.addItem(item)
     }
     menu.addItem(.separator())
+    menu.addItem(header(t("Allowed countries — apps run only from these", "Разрешённые страны — с них программы работают")))
+    menu.addItem(checked("\(flag(jumpCountry)) \(jumpCountry)", false))
+    menu.addItem(checked("\(flag(country)) \(country)", true))
+    menu.addItem(.separator())
+    menu.addItem(checked(t("Pause guard for 15 minutes", "Пауза на 15 минут"), false))
+    return menu
+  }
+
+  private static func plain(_ text: NSAttributedString) -> NSMenuItem {
+    let item = NSMenuItem(title: text.string, action: nil, keyEquivalent: "")
+    item.attributedTitle = text
+    item.isEnabled = true
+    return item
+  }
+
+  private static func checked(_ title: String, _ on: Bool) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    item.state = on ? .on : .off
+    item.isEnabled = true
+    return item
+  }
+
+  private static func header(_ title: String) -> NSMenuItem {
+    let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+    item.isEnabled = false
+    return item
   }
 }
