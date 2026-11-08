@@ -1,35 +1,75 @@
 {
-  "_": "Тексты озвучки по сценам (ключи — сцены из video/scenes.html). Для русского голоса Silero латиница записана русскими буквами — иначе он её пропускает.",
+  "_": "Тексты озвучки по продуктам и сценам (ключи сцен — из video/scenes.html). Для русского голоса Silero латиница записана русскими буквами — иначе он её пропускает.",
   "_voice": {
-    "ru": {"speaker": "xenia", "rate": "medium"},
-    "en": {"length_scale": 0.86, "noise_scale": 0.75, "noise_w_scale": 0.9}
+    "ru": {
+      "speaker": "xenia",
+      "rate": "medium"
+    },
+    "en": {
+      "length_scale": 0.86,
+      "noise_scale": 0.75,
+      "noise_w_scale": 0.9
+    }
   },
-  "en": {
-    "hook": "Ten Claude Code chats at once? Here are two daily headaches, and one tiny free Mac app that fixes both!",
-    "p1": "Problem one: a full context window. Every message re-reads the entire chat, so your limits melt. The model slows down, and then auto-compaction hits at the worst possible moment!",
-    "fix1": "The fix? Save everything to the docs. Write a handoff. Slash clear. And keep going, in the same chat!",
-    "d1a": "Cloudex Guard puts every chat's context right in your menu bar, fullest first.",
-    "d1b": "A chat waiting for your OK? You'll see it instantly.",
-    "d1c": "One click on the broom, and the chat saves everything and writes its handoff!",
-    "p2": "Problem two: your VPN changes behind your back. It reconnects, jumps to another country, and AI services notice.",
-    "d2a": "Pick the apps to guard, and the countries you allow.",
-    "d2b": "Address jumps? Those apps freeze in seconds. Not a single request leaks!",
-    "d2c": "Address back? Everything picks up exactly where it stopped.",
-    "trust": "Free. Open source. Zero telemetry. And every build is verifiable!",
-    "cta": "Cloudex Guard. Grab it on GitHub, link below!"
+  "guard": {
+    "_scenes": [
+      "hook",
+      "p1",
+      "fix1",
+      "d1a",
+      "d1b",
+      "d1c",
+      "trust",
+      "cta"
+    ],
+    "en": {
+      "hook": "Ten Claude Code chats at once? Here's a daily headache, and one tiny free Mac app that fixes it!",
+      "p1": "The problem: a full context window. Every message re-reads the entire chat, so your limits melt. The model slows down, and then auto-compaction hits at the worst possible moment!",
+      "fix1": "The fix? Save everything to the docs. Write a handoff. Slash clear. And keep going, in the same chat!",
+      "d1a": "Cloudex Guard puts every chat's context right in your menu bar, fullest first.",
+      "d1b": "A chat waiting for your OK? You'll see it instantly.",
+      "d1c": "One click on the broom, and the chat saves everything and writes its handoff!",
+      "trust": "Free. Open source. Zero telemetry. Zero network requests. And every build is verifiable!",
+      "cta": "Cloudex Guard. Grab it on GitHub, link below!"
+    },
+    "ru": {
+      "hook": "Десять чатов Клод Код одновременно? Вот ежедневная головная боль, и маленькое бесплатное приложение для Мака, которое её лечит!",
+      "p1": "Проблема: переполненный контекст. Каждое сообщение перечитывает весь чат, и лимиты тают на глазах. Модель тупит, а потом автосжатие бьёт в самый неподходящий момент!",
+      "fix1": "Решение? Всё сохраняем в документацию. Пишем хэндофф. Слэш клир. И едем дальше, в том же чате!",
+      "d1a": "Клаудекс Гард показывает заполнение каждого чата прямо в строке меню, самые полные сверху.",
+      "d1b": "Чат ждёт вашего ответа? Вы увидите это сразу.",
+      "d1c": "Одно нажатие на метлу, и чат всё сохраняет и пишет хэндофф!",
+      "trust": "Бесплатно. Открытый код. Ноль телеметрии. Ни одного сетевого запроса. И каждую сборку можно проверить!",
+      "cta": "Клаудекс Гард. Ссылка на гитхаб в описании!"
+    }
   },
-  "ru": {
-    "hook": "Десять чатов Клод Код одновременно? Вот две ежедневные головные боли, и маленькое бесплатное приложение для Мака, которое лечит обе!",
-    "p1": "Проблема номер один: переполненный контекст. Каждое сообщение перечитывает весь чат, и лимиты тают на глазах. Модель тупит, а потом автосжатие бьёт в самый неподходящий момент!",
-    "fix1": "Решение? Всё сохраняем в документацию. Пишем хэндофф. Слэш клир. И едем дальше, в том же чате!",
-    "d1a": "Клаудекс Гард показывает заполнение каждого чата прямо в строке меню, самые полные сверху.",
-    "d1b": "Чат ждёт вашего ответа? Вы увидите это сразу.",
-    "d1c": "Одно нажатие на метлу, и чат всё сохраняет и пишет хэндофф!",
-    "p2": "Проблема номер два: ви-пи-эн меняется у вас за спиной. Переподключился, прыгнул в другую страну, и ИИ-сервисы это замечают.",
-    "d2a": "Выберите программы для защиты и разрешённые страны.",
-    "d2b": "Адрес прыгнул? Программы замирают за секунды. Ни одного запроса с чужого адреса!",
-    "d2c": "Адрес вернулся? Всё продолжается ровно с того же места.",
-    "trust": "Бесплатно. Открытый код. Ноль телеметрии. И каждую сборку можно проверить!",
-    "cta": "Клаудекс Гард. Ссылка на гитхаб в описании!"
+  "shield": {
+    "_scenes": [
+      "hook",
+      "p2",
+      "d2a",
+      "d2b",
+      "d2c",
+      "trust",
+      "cta"
+    ],
+    "en": {
+      "hook": "Your VPN just switched servers. Did your apps notice? Here's a tiny free Mac app that does!",
+      "p2": "The problem: your VPN drops, reconnects, or jumps to another country. The Wi-Fi changes. And your apps keep talking from an address you never expected.",
+      "d2a": "Cloudex Shield shows where your Mac goes out from, right in the menu bar. Pick the apps to guard, and the countries you allow.",
+      "d2b": "Address jumps? Those apps freeze in seconds, together with everything they started.",
+      "d2c": "Address back? Everything picks up exactly where it stopped. Nothing closed, nothing lost!",
+      "trust": "It's not a VPN, and it never touches your traffic. System apps and VPN clients are never paused. Free, open source, and every build is verifiable!",
+      "cta": "Cloudex Shield. Grab it on GitHub, link below!"
+    },
+    "ru": {
+      "hook": "Ваш ви-пи-эн только что сменил сервер. А программы заметили? Вот маленькое бесплатное приложение для Мака, которое замечает!",
+      "p2": "Проблема: ви-пи-эн отвалился, переподключился или прыгнул в другую страну. Сменился вай-фай. А программы продолжают работать с адреса, которого вы не ждали.",
+      "d2a": "Клаудекс Шилд показывает, откуда выходит ваш Мак, прямо в строке меню. Выберите программы для защиты и разрешённые страны.",
+      "d2b": "Адрес прыгнул? Программы замирают за секунды, вместе со всем, что они запустили.",
+      "d2c": "Адрес вернулся? Всё продолжается ровно с того же места. Ничего не закрыто, ничего не потеряно!",
+      "trust": "Это не ви-пи-эн, и трафик он не трогает. Системные программы и ви-пи-эн клиенты на паузу не встают. Бесплатно, открытый код, и каждую сборку можно проверить!",
+      "cta": "Клаудекс Шилд. Ссылка на гитхаб в описании!"
+    }
   }
 }
