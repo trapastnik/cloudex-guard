@@ -36,6 +36,8 @@ What the app gives you for this:
 
 **The fix: watch the address, pause on surprises** — the network guard:
 
+<p align="center"><img src="assets/guard.gif" alt="Network guard: the VPN exit jumps to another country, Claude and ChatGPT are paused, then resume when the address is back" width="600"><br><sub>Demo mode (<code>app/demo.sh net</code>): the VPN exit jumps from 🇺🇸 to 🇧🇷 → ❄︎ Claude and ChatGPT are paused → the address is back, everything resumes. Documentation IP addresses.</sub></p>
+
 - **Your country in the menu bar**, as claude.ai itself sees it, with a warning when your VPN routes some traffic another way or IPv6 bypasses it.
 - **Pause, don't kill.** Pick apps and allowed countries. On an unexpected network the apps — and everything they started; for Claude that includes Claude Code and its MCP servers — are paused, and continue exactly where they stopped once the network is back. Nothing is lost.
 - **How others see us** — what claude.ai, the Claude API, chatgpt.com and others see; IPv6, DNS and time zone checks.
