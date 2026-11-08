@@ -25,6 +25,8 @@ func isAlive(_ id: String) -> Bool {
 let staleDays = 3.0
 let recentCount = 10
 let hiddenDays = 30.0
+// Файл чата, молчащего дольше, удаляется при запуске приложения (вместе со служебными отметками).
+let chatDays = 60.0
 
 struct Chat: Decodable {
   let id: String
@@ -302,9 +304,15 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     if !isDemo { NetGuard.shared.releaseAll() }
   }
 
-  // Старые служебные файлы: просьбы 🧹 старше суток, отметки и состояния чатов, молчащих больше 30 дней.
+  // Старые файлы: просьбы 🧹 старше суток, отметки и состояния чатов, молчащих больше 30 дней,
+  // и сами файлы чатов, молчащих больше 60 дней (из меню они пропадают раньше — через 30).
   func pruneOldFiles() {
     let now = Date()
+    let chats = (try? FileManager.default.contentsOfDirectory(at: dataDir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+    for file in chats where file.lastPathComponent.hasPrefix("local_") && file.pathExtension == "json" {
+      let changed = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? now
+      if now.timeIntervalSince(changed) > chatDays * 86400 { try? FileManager.default.removeItem(at: file) }
+    }
     for (folder, days) in [(requestsDir, 1.0), (aliveDir, 30.0), (statusDir, 30.0)] {
       let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
       for file in files {
