@@ -3,20 +3,18 @@
 #
 #   zsh app/demo.sh        — чаты: «Ждут вас», 🧹 (английский интерфейс)
 #   zsh app/demo.sh ru     — то же на русском
-#   zsh app/demo.sh net    — страж сети: VPN прыгает в другую страну → ❄︎ заморозка → адрес вернулся
-#                            (фазы переключаются Enter в этом окне; настоящие программы не трогаются)
 #
-# На время записи настоящий Cloudex Guard выключается (заморозка отпускается, автозапуск
+# На время записи настоящие Cloudex Guard и Cloudex Shield выключаются (автозапуск
 # приостанавливается), чтобы в строке меню был один значок без ваших чатов и адреса.
-# Enter в этом окне — демо закрывается, настоящее приложение и автозапуск возвращаются.
+# Enter в этом окне — демо закрывается, настоящие приложения и автозапуск возвращаются.
 set -e
 cd "$(dirname "$0")"
-LANG_UI=en; NET=0
-for a in "$@"; do case "$a" in ru|en) LANG_UI=$a;; net) NET=1;; esac; done
-PHASE="$(getconf DARWIN_USER_TEMP_DIR)cloudex-guard-demo/net-phase"
+LANG_UI=en
+for a in "$@"; do case "$a" in ru|en) LANG_UI=$a;; esac; done
 APP="${TMPDIR:-/tmp}/Cloudex Guard Demo.app"
 ID=io.github.trapastnik.cloudex-guard.demo
 AGENT="$HOME/Library/LaunchAgents/io.github.trapastnik.cloudex-guard.plist"
+SHIELD_AGENT="$HOME/Library/LaunchAgents/io.github.trapastnik.cloudex-shield.plist"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -40,39 +38,16 @@ codesign --force --sign - "$APP"
 # Значок демо — правее, ближе к часам, чтобы не спрятался под вырезом экрана.
 defaults write $ID "NSStatusItem Preferred Position Cloudex Guard Demo" -float 260
 
-# Убрать настоящий значок на время записи.
-[ -f "$AGENT" ] && launchctl bootout "gui/$(id -u)" "$AGENT" 2>/dev/null || true
+# Убрать настоящие значки на время записи (в Shield — ваша страна и адрес).
+for a in "$AGENT" "$SHIELD_AGENT"; do [ -f "$a" ] && launchctl bootout "gui/$(id -u)" "$a" 2>/dev/null || true; done
 osascript -e 'tell application id "io.github.trapastnik.cloudex-guard" to quit' 2>/dev/null || true
+osascript -e 'tell application id "io.github.trapastnik.cloudex-shield" to quit' 2>/dev/null || true
 sleep 1
 
 pkill -x CloudexGuardDemo 2>/dev/null || true
 open -g --env CLOUDEX_DEMO=1 --env "CLOUDEX_DEMO_LANG=$LANG_UI" "$APP"
 sleep 2
 
-if [ "$NET" = 1 ]; then
-  echo ok > "$PHASE"
-  cat <<'TXT'
-
-Демо стража сети запущено: в строке меню 🇺🇸 ● 84% ✋1 — VPN в США, всё разрешено.
-
-Подготовка: перейдите на пустой рабочий стол (Mission Control → «+»), чтобы за меню не было окон.
-  Это окно терминала держите рядом, но ВНЕ области записи.
-⌘⇧5 → «Записать выбранную область»: правый верхний угол экрана, ширина ~900 px
-  (подменю «Network guard» открывается ВЛЕВО от меню), высота — до низа меню → «Записать».
-
-  1. Открыть меню, навести на «Network guard» — подменю с программами и 🇺🇸 US, 2 секунды. Esc.
-  2. Enter в этом окне → в строке меню красное ❄︎BR. Подождать секунду.
-  3. Открыть меню — красная строка «❄︎ Paused: ChatGPT, Claude…», держать 3 секунды. Esc.
-  4. Enter в этом окне → снова 🇺🇸. Открыть меню на 2 секунды. Esc.
-  5. Остановить запись (■) — ДО следующего Enter: после него вернётся ваше настоящее приложение.
-Пришлите .mov — сделаю GIF.
-
-TXT
-  read "?Enter — сеть прыгнула в Бразилию (❄︎)… "
-  echo jump > "$PHASE"
-  read "?Enter — адрес вернулся (🇺🇸)… "
-  echo ok > "$PHASE"
-else
 cat <<'TXT'
 
 Демо запущено: в строке меню значок с 84% и ✋1.
@@ -84,8 +59,7 @@ cat <<'TXT'
 Сохранённый .mov пришлите — переведу в GIF.
 
 TXT
-fi
-read "?Enter — закрыть демо и вернуть настоящий Cloudex Guard… "
+read "?Enter — закрыть демо и вернуть настоящие приложения… "
 
 pkill -x CloudexGuardDemo 2>/dev/null || true
 if [ -f "$AGENT" ]; then
@@ -93,5 +67,6 @@ if [ -f "$AGENT" ]; then
 else
   open -g "$HOME/Applications/Cloudex Guard.app"
 fi
+if [ -f "$SHIELD_AGENT" ]; then launchctl bootstrap "gui/$(id -u)" "$SHIELD_AGENT" 2>/dev/null || true; fi
 sleep 2
 pgrep -x CloudexGuard >/dev/null && echo "Настоящий Cloudex Guard снова работает." || echo "Проверьте: Cloudex Guard не запустился — откройте его из ~/Applications."

@@ -1,4 +1,4 @@
-// Рисует иконку приложения (тот же знак, что в mark.svg: шкала-дуга и глобус) и собирает AppIcon.icns:
+// Рисует иконку приложения (тот же знак, что в mark.svg: шкала-дуга со стрелкой) и собирает AppIcon.icns:
 //   swift make-icon.swift && iconutil -c icns AppIcon.iconset
 import AppKit
 
@@ -13,7 +13,7 @@ func draw(_ size: CGFloat) -> NSBitmapImageRep {
   let tile = NSRect(x: inset, y: inset, width: size - 2 * inset, height: size - 2 * inset)
   NSColor(red: 0.086, green: 0.086, blue: 0.102, alpha: 1).setFill()
   NSBezierPath(roundedRect: tile, xRadius: 18 * s, yRadius: 18 * s).fill()
-  // Шкала-дуга (контекст) и глобус (сеть) — как в mark.svg; координаты AppKit — y вверх.
+  // Шкала-дуга — как в mark.svg; координаты AppKit — y вверх.
   let k = tile.width / 100
   let center = NSPoint(x: tile.midX, y: tile.midY)
   func arc(to end: CGFloat) -> NSBezierPath {
@@ -27,12 +27,12 @@ func draw(_ size: CGFloat) -> NSBitmapImageRep {
   arc(to: -45).stroke()
   NSColor(red: 0.937, green: 0.427, blue: 0.122, alpha: 1).setStroke()
   arc(to: 41.4).stroke()
-  NSColor(white: 0.96, alpha: 1).setStroke()
-  let globe = NSBezierPath(ovalIn: NSRect(x: center.x - 13 * k, y: center.y - 13 * k, width: 26 * k, height: 26 * k))
-  let meridian = NSBezierPath(ovalIn: NSRect(x: center.x - 5.5 * k, y: center.y - 13 * k, width: 11 * k, height: 26 * k))
-  let equator = NSBezierPath()
-  equator.move(to: NSPoint(x: center.x - 13 * k, y: center.y)); equator.line(to: NSPoint(x: center.x + 13 * k, y: center.y))
-  for path in [globe, meridian, equator] { path.lineWidth = 3.2 * k; path.stroke() }
+  // Стрелка шкалы и ось — как в mark.svg.
+  NSColor(white: 0.96, alpha: 1).set()
+  let needle = NSBezierPath()
+  needle.move(to: center); needle.line(to: NSPoint(x: center.x + 15.6 * k, y: center.y + 13.8 * k))
+  needle.lineWidth = 4.4 * k; needle.lineCapStyle = .round; needle.stroke()
+  NSBezierPath(ovalIn: NSRect(x: center.x - 6.2 * k, y: center.y - 6.2 * k, width: 12.4 * k, height: 12.4 * k)).fill()
   NSGraphicsContext.restoreGraphicsState()
   return rep
 }

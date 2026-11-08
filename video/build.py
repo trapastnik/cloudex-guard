@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Видео-эксплейнер Cloudex Guard: YouTube (1920×1080) и вертикаль для соцсетей (1080×1920), EN и RU.
+"""Видео-эксплейнеры Cloudex Guard и Cloudex Shield: YouTube (1920×1080), вертикаль (1080×1920)
+и короткая вертикаль (~30 с), EN и RU.
 
-Кадры-титры — video/scenes.html (снимает headless Chrome), записи — assets/demo.mp4 (чаты, 🧹) и
-assets/guard.mp4 (страж сети), обе сняты в демо-режиме приложения. Озвучка — video/voice.py
-(work/voice/<lang>-<scene>.wav); сцена длится столько, сколько звучит её реплика. Без озвучки — тишина.
+Кадры-титры — video/scenes.html (снимает headless Chrome). Записи сняты в демо-режиме приложений:
+Guard — assets/demo.mp4 (чаты, 🧹, zsh app/demo.sh), Shield — ../shield/assets/demo.mp4 (страж сети,
+zsh ../shield/app/demo.sh). Озвучка — video/voice.py (work/voice/<product>-<lang>-<scene>.wav); сцена
+длится столько, сколько звучит её реплика. Без озвучки — тишина.
 
-  /usr/bin/python3 video/build.py [en|ru ...] [h|v ...]
-Готовые файлы: ~/Desktop/WWWWW/MODS/video-out/cloudex-guard-<lang>-<youtube|vertical>.mp4
+  /usr/bin/python3 video/build.py guard|shield [en|ru ...] [h|v ...] [short]
+Готовые файлы: ~/Desktop/WWWWW/MODS/video-out/cloudex-<product>-<lang>-<youtube|vertical|short>.mp4
+Точки разреза записей (CUTS) подобраны под конкретную запись — после перезаписи поправить.
 """
 import subprocess
 import sys
@@ -21,26 +24,46 @@ CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 FPS = 30
 
 SIZE = {"h": (1920, 1080), "v": (1080, 1920)}
-# Где лежит запись в кадре с подписью: (x, y, ширина, высота) для demo.mp4 (442×514) и guard.mp4 (798×514).
-PLACE = {
-    "h": {"demo": (642, 300, 636, 740), "guard": (386, 300, 1148, 740)},
-    "v": {"demo": (60, 640, 960, 1116), "guard": (40, 878, 1000, 644)},
+# Записи: файл и где он стоит в кадре с подписью — (x, y, ширина, высота). Узкая запись меню
+# Guard — 442×514, широкая Shield (меню и подменю «Защита» слева) — около 798×514.
+CLIPS = {
+    "guard": ROOT / "assets" / "demo.mp4",
+    "shield": ROOT.parent / "shield" / "assets" / "demo.mp4",
 }
-# Сюжет: титры (сцена, секунды) и куски записей (кадр с подписью, файл, начало, конец).
-STORY = [
-    ("card", "hook", 3.0),
-    ("card", "p1", 4.0),
-    ("card", "fix1", 4.0),
-    ("demo", "d1a", "demo", 0.0, 4.5),
-    ("demo", "d1b", "demo", 4.5, 10.9),
-    ("demo", "d1c", "demo", 10.9, 15.4),
-    ("card", "p2", 4.0),
-    ("demo", "d2a", "guard", 0.0, 4.1),
-    ("demo", "d2b", "guard", 4.1, 9.05),
-    ("demo", "d2c", "guard", 9.05, 13.95),
-    ("card", "trust", 3.0),
-    ("card", "cta", 4.0),
-]
+PLACE = {
+    "h": {"guard": (642, 300, 636, 740), "shield": (386, 300, 1148, 740)},
+    "v": {"guard": (60, 640, 960, 1116), "shield": (40, 878, 1000, 644)},
+}
+# Сюжеты: титры (сцена, секунды) и куски записи (сцена с подписью, начало, конец в секундах записи).
+STORIES = {
+    "guard": [
+        ("card", "hook", 3.0),
+        ("card", "p1", 4.0),
+        ("card", "fix1", 4.0),
+        ("demo", "d1a", 0.0, 4.5),
+        ("demo", "d1b", 4.5, 10.9),
+        ("demo", "d1c", 10.9, 15.4),
+        ("card", "trust", 3.0),
+        ("card", "cta", 4.0),
+    ],
+    "shield": [
+        ("card", "hook", 3.0),
+        ("card", "p2", 4.0),
+        ("demo", "d2a", 0.0, 4.1),
+        ("demo", "d2b", 4.1, 9.05),
+        ("demo", "d2c", 9.05, 13.95),
+        ("card", "trust", 3.0),
+        ("card", "cta", 4.0),
+    ],
+}
+# Короткие версии для Shorts/Reels/Клипов (~30 с).
+SHORTS = {
+    "guard": [("card", "hook", 3.0), ("demo", "d1a", 0.0, 4.5), ("demo", "d1b", 4.5, 10.9),
+              ("demo", "d1c", 10.9, 15.4), ("card", "cta", 3.5)],
+    "shield": [("card", "hook", 3.0), ("demo", "d2a", 0.0, 4.1), ("demo", "d2b", 4.1, 9.05),
+               ("demo", "d2c", 9.05, 13.95), ("card", "cta", 3.5)],
+}
+PRODUCT = "guard"
 FADE = 0.18
 DEMO_SPEED = 1.25   # записи демо чуть быстрее — в ритм речи
 VOICE_DELAY = 0.12   # реплика начинается почти сразу
@@ -49,7 +72,7 @@ ZOOM = 0.035         # наезд камеры на титрах за сцену
 
 
 def voice(lang, scene):
-    path = WORK / "voice" / f"{lang}-{scene}.wav"
+    path = WORK / "voice" / f"{PRODUCT}-{lang}-{scene}.wav"
     if not path.exists():
         return None, 0.0
     with wave.open(str(path)) as w:
@@ -73,10 +96,10 @@ SIZE_OF = {}
 
 def shot(scene, lang, fmt):
     w, h = SIZE[fmt]
-    png = WORK / f"{lang}-{fmt}-{scene}.png"
+    png = WORK / f"{PRODUCT}-{lang}-{fmt}-{scene}.png"
     run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-color-profile=srgb",
          "--allow-file-access-from-files", f"--window-size={w},{h}", f"--screenshot={png}",
-         f"{SCENES.as_uri()}?s={scene}&l={lang}&f={fmt}"])
+         f"{SCENES.as_uri()}?p={PRODUCT}&s={scene}&l={lang}&f={fmt}"])
     SIZE_OF[str(png)] = (w, h)
     return png
 
@@ -111,7 +134,7 @@ def demo(png, clip, t0, t1, place, out, first, last, wav=None, dur=None):
     ain, af = audio_args(wav, dur)
     pad = f",tpad=stop_mode=clone:stop_duration={hold:.3f}" if hold > 0 else ""
     run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-t", f"{dur}", "-i", str(png),
-         "-ss", f"{t0}", "-t", f"{src_span}", "-i", str(ROOT / "assets" / f"{clip}.mp4"), *ain,
+         "-ss", f"{t0}", "-t", f"{src_span}", "-i", str(CLIPS[clip]), *ain,
          "-filter_complex",
          f"[1:v]setpts=(PTS-STARTPTS)/{DEMO_SPEED},fps={FPS},scale={w}:{h}:flags=lanczos{pad}[c];"
          f"[0:v]fps={FPS}[b];[b][c]overlay={x}:{y}:eof_action=repeat,format=yuv420p{tail}[v];" + af.format(n=2),
@@ -120,39 +143,26 @@ def demo(png, clip, t0, t1, place, out, first, last, wav=None, dur=None):
          str(out)])
 
 
-# Короткая версия для Reels/TikTok (~30 с): зацепка → карта контекста → 🧹 → заморозка → возврат → ссылка.
-SHORT = [
-    ("card", "hook", 3.0),
-    ("demo", "d1a", "demo", 0.0, 4.5),
-    ("demo", "d1c", "demo", 10.9, 15.4),
-    ("demo", "d2b", "guard", 4.1, 9.05),
-    ("demo", "d2c", "guard", 9.05, 13.95),
-    ("card", "cta", 3.5),
-]
-
-
-def build(lang, fmt, story=None, suffix=None):
-    STORY = story or globals()["STORY"]
+def build(lang, fmt, story, suffix=None):
     parts = []
-    for i, item in enumerate(STORY):
-        out = WORK / f"{lang}-{fmt}{suffix or ''}-{i:02d}.mp4"
+    for i, item in enumerate(story):
+        out = WORK / f"{PRODUCT}-{lang}-{fmt}{suffix or ''}-{i:02d}.mp4"
         if item[0] == "card":
             _, scene, dur = item
             wav, length = voice(lang, scene)
             card(shot(scene, lang, fmt), max(dur, VOICE_DELAY + length + VOICE_TAIL), out, wav)
         else:
-            _, scene, clip, t0, t1 = item
-            prev = STORY[i - 1] if i else None
-            nxt = STORY[i + 1] if i + 1 < len(STORY) else None
-            first = not prev or prev[0] != "demo" or prev[2] != clip
-            last = not nxt or nxt[0] != "demo" or nxt[2] != clip
+            _, scene, t0, t1 = item
+            first = i == 0 or story[i - 1][0] != "demo"
+            last = i + 1 == len(story) or story[i + 1][0] != "demo"
             wav, length = voice(lang, scene)
-            demo(shot(scene, lang, fmt), clip, t0, t1, PLACE[fmt][clip], out, first, last,
+            demo(shot(scene, lang, fmt), PRODUCT, t0, t1, PLACE[fmt][PRODUCT], out, first, last,
                  wav, VOICE_DELAY + length + VOICE_TAIL)
         parts.append(out)
-    lst = WORK / f"{lang}-{fmt}{suffix or ''}.txt"
+    lst = WORK / f"{PRODUCT}-{lang}-{fmt}{suffix or ''}.txt"
     lst.write_text("".join(f"file '{p}'\n" for p in parts))
-    name = OUT / f"cloudex-guard-{lang}-{suffix.strip('-') if suffix else ('youtube' if fmt == 'h' else 'vertical')}.mp4"
+    kind = suffix.strip('-') if suffix else ('youtube' if fmt == 'h' else 'vertical')
+    name = OUT / f"cloudex-{PRODUCT}-{lang}-{kind}.mp4"
     run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst),
          "-c:v", "libx264", "-crf", "20", "-preset", "slow", "-pix_fmt", "yuv420p", "-r", str(FPS),
          "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
@@ -161,14 +171,16 @@ def build(lang, fmt, story=None, suffix=None):
 
 
 if __name__ == "__main__":
-    langs = [a for a in sys.argv[1:] if a in ("en", "ru")] or ["en", "ru"]
-    fmts = [a for a in sys.argv[1:] if a in ("h", "v")] or ["h", "v"]
-    if "short" in sys.argv[1:]:  # только короткая вертикаль: video/build.py short [en|ru]
-        WORK.mkdir(parents=True, exist_ok=True)
-        for lang in langs:
-            build(lang, "v", SHORT, "-short")
-        sys.exit(0)
+    args = sys.argv[1:]
+    PRODUCT = next((a for a in args if a in STORIES), None) or sys.exit("укажите guard или shield")
+    if not CLIPS[PRODUCT].exists():
+        sys.exit(f"нет записи {CLIPS[PRODUCT]} — снимите её демо-скриптом приложения")
+    langs = [a for a in args if a in ("en", "ru")] or ["en", "ru"]
+    fmts = [a for a in args if a in ("h", "v")] or ["h", "v"]
     WORK.mkdir(parents=True, exist_ok=True)
     for lang in langs:
+        if "short" in args:
+            build(lang, "v", SHORTS[PRODUCT], "-short")
+            continue
         for fmt in fmts:
-            build(lang, fmt)
+            build(lang, fmt, STORIES[PRODUCT])

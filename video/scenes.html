@@ -1,7 +1,7 @@
 <!doctype html>
-<!-- Кадры для видео-эксплейнера Cloudex Guard. Снимаются headless Chrome по адресу
-     scenes.html?s=<сцена>&l=<en|ru>&f=<h|v> (h — 1920×1080, v — 1080×1920). Сборка — video/build.py. -->
-<html><head><meta charset="utf-8"><title>Cloudex Guard video scenes</title>
+<!-- Кадры для видео-эксплейнеров Cloudex Guard и Cloudex Shield. Снимаются headless Chrome по адресу
+     scenes.html?p=<guard|shield>&s=<сцена>&l=<en|ru>&f=<h|v> (h — 1920×1080, v — 1080×1920). Сборка — video/build.py. -->
+<html><head><meta charset="utf-8"><title>Cloudex video scenes</title>
 <style>
 :root { --bg:#111113; --surface:#1b1b1f; --line:#2c2c33; --text:#f4f4f5; --muted:#a1a1aa; --accent:#fb923c; --red:#f87171; --green:#4ade80; }
 * { box-sizing: border-box; }
@@ -9,7 +9,10 @@ html, body { margin: 0; overflow: hidden; }
 body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif; -webkit-font-smoothing: antialiased; }
 body.h { width: 1920px; height: 1080px; }
 body.v { width: 1080px; height: 1920px; }
-body::before { content: ""; position: fixed; inset: 0; background: radial-gradient(900px 600px at 85% 10%, rgba(251,146,60,.16), transparent 70%), radial-gradient(700px 500px at 0% 100%, rgba(251,146,60,.07), transparent 70%); }
+body::before { content: ""; position: fixed; inset: 0; background: radial-gradient(900px 600px at 85% 10%, var(--glow), transparent 70%), radial-gradient(700px 500px at 0% 100%, var(--glow2), transparent 70%); }
+:root { --glow: rgba(251,146,60,.16); --glow2: rgba(251,146,60,.07); }
+body.shield { --accent: #22d3ee; --glow: rgba(34,211,238,.15); --glow2: rgba(34,211,238,.06); }
+body.shield .step .n { color: #06262c; }
 .wrap { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 140px; }
 .v .wrap { padding: 0 80px; }
 .brand { position: absolute; top: 64px; left: 140px; display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 700; color: var(--muted); }
@@ -56,14 +59,15 @@ code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .86em;
 <div class="wrap" id="root"></div>
 <script>
 const q = new URLSearchParams(location.search);
-const S = q.get('s') || 'hook', L = q.get('l') || 'en', FMT = q.get('f') || 'h';
-document.body.className = FMT;
-const T = {
+const S = q.get('s') || 'hook', L = q.get('l') || 'en', FMT = q.get('f') || 'h', P = q.get('p') || 'guard';
+document.body.className = FMT + ' ' + P;
+const GM = '../assets/mark.svg', SM = '../../shield/assets/mark.svg';
+const T = { guard: {
   en: {
-    hook: `<div class="brand"><img src="../assets/mark.svg">Cloudex Guard</div>
+    hook: `<div class="brand"><img src="${GM}">Cloudex Guard</div>
            <h1>Running 10+<br><em>Claude Code</em> chats?</h1>
-           <p class="sub">Two problems you hit every day — and a small free menu bar app for macOS that fixes both.</p>`,
-    p1: `<div class="eyebrow">Problem 1</div><h1>A full context window<br>costs you twice</h1>
+           <p class="sub">A full context window quietly burns your limits. A small free menu bar app for macOS shows it coming.</p>`,
+    p1: `<div class="eyebrow">The problem</div><h1>A full context window<br>costs you twice</h1>
          <ul class="x"><li><b>Tokens.</b> Every message re-reads the whole chat — limits melt.</li>
          <li><b>Quality.</b> The model slows down and forgets the beginning.</li>
          <li><b>Compaction.</b> Kicks in at random and loses decisions and file paths.</li></ul>`,
@@ -71,27 +75,20 @@ const T = {
            <div class="steps"><div class="step"><div class="n">1</div><div><b>See it coming</b><span>every chat's fill in the menu bar</span></div></div>
            <div class="step"><div class="n">2</div><div><b>🧹 Save to docs</b><span>one click asks the chat</span></div></div>
            <div class="step"><div class="n">3</div><div><b>Handoff</b><span>+ a short text to paste back</span></div></div>
-           <div class="step"><div class="n">4</div><div><b><code>/clear</code></b><span>and keep going in the same chat</span></div></div></div>`,
-    p2: `<div class="eyebrow">Problem 2</div><h1>Your VPN changes —<br>you find out last</h1>
-         <ul class="x"><li><b>VPN surprises.</b> It reconnects, the exit jumps to another country.</li>
-         <li><b>Strict checks.</b> AI services watch where connections come from.</li>
-         <li><b>Invisible leaks.</b> IPv6, DNS, split routing.</li></ul>`,
-    trust: `<div class="eyebrow">Trust, but verify</div><h1>Free. Open source.<br><em>No telemetry.</em></h1>
-            <div class="chips"><span class="chip ok">MIT license</span><span class="chip ok">No macOS permissions</span><span class="chip ok">Mod never goes online</span><span class="chip ok">Builds verifiable with gh attestation</span></div>`,
-    cta: `<div class="lockup"><img src="../assets/mark.svg"><span>Cloudex <em>Guard</em></span></div><div class="sub">Keep your Claude Code chats clean — and your connection where you expect it.</div>
+           <div class="step"><div class="n">4</div><div><b><code>/clear</code></b><span>you check, clear, keep going</span></div></div></div>`,
+    trust: `<div class="eyebrow">Trust, but verify</div><h1>Free. Open source.<br><em>Never goes online.</em></h1>
+            <div class="chips"><span class="chip ok">MIT license</span><span class="chip ok">No macOS permissions</span><span class="chip ok">Zero network requests</span><span class="chip ok">Builds verifiable with gh attestation</span></div>`,
+    cta: `<div class="lockup"><img src="${GM}"><span>Cloudex <em>Guard</em></span></div><div class="sub">See how full every Claude Code chat is — before your limits run out.</div>
           <div class="url"><span>github.com/</span>trapastnik/cloudex-guard</div><div class="small">medfab-dev.tech · macOS 13+ · free</div>`,
     d1a: `<div class="eyebrow">Context at a glance</div><h2>Every chat's fill — <em>fullest first</em></h2>`,
     d1b: `<div class="eyebrow">Waiting for you</div><h2>✋ needs your OK &nbsp;·&nbsp; 💬 just finished</h2>`,
     d1c: `<div class="eyebrow">🧹 One click</div><h2>Save to docs + handoff → <em>/clear</em> → same chat</h2>`,
-    d2a: `<div class="eyebrow">Network guard</div><h2>Pick apps and <em>allowed countries</em></h2>`,
-    d2b: `<div class="eyebrow">VPN jumps to 🇧🇷</div><h2><em>❄︎ Paused in seconds</em> — no request leaves</h2>`,
-    d2c: `<div class="eyebrow">Back in 🇺🇸</div><h2>Everything resumes — <em>nothing lost</em></h2>`,
   },
   ru: {
-    hook: `<div class="brand"><img src="../assets/mark.svg">Cloudex Guard</div>
+    hook: `<div class="brand"><img src="${GM}">Cloudex Guard</div>
            <h1>Ведёте 10+ чатов<br><em>Claude Code</em>?</h1>
-           <p class="sub">Две проблемы, с которыми сталкиваешься каждый день, — и бесплатное приложение для строки меню macOS, которое решает обе.</p>`,
-    p1: `<div class="eyebrow">Проблема 1</div><h1>Переполненный контекст<br>обходится дважды</h1>
+           <p class="sub">Переполненный контекст незаметно сжигает лимиты. Бесплатное приложение для строки меню macOS показывает это заранее.</p>`,
+    p1: `<div class="eyebrow">Проблема</div><h1>Переполненный контекст<br>обходится дважды</h1>
          <ul class="x"><li><b>Токены.</b> Каждое сообщение перечитывает весь чат — лимиты тают.</li>
          <li><b>Качество.</b> Модель тормозит и забывает начало.</li>
          <li><b>Сжатие.</b> Срабатывает внезапно и теряет решения и пути к файлам.</li></ul>`,
@@ -99,25 +96,51 @@ const T = {
            <div class="steps"><div class="step"><div class="n">1</div><div><b>Видно заранее</b><span>заполнение каждого чата в строке меню</span></div></div>
            <div class="step"><div class="n">2</div><div><b>🧹 В документацию</b><span>одна кнопка просит чат</span></div></div>
            <div class="step"><div class="n">3</div><div><b>Handoff</b><span>+ короткий текст для вставки</span></div></div>
-           <div class="step"><div class="n">4</div><div><b><code>/clear</code></b><span>и дальше в том же чате</span></div></div></div>`,
-    p2: `<div class="eyebrow">Проблема 2</div><h1>VPN меняется —<br>вы узнаёте последним</h1>
-         <ul class="x"><li><b>Сюрпризы VPN.</b> Переподключился, выход прыгнул в другую страну.</li>
-         <li><b>Строгие проверки.</b> ИИ-сервисы следят, откуда подключения.</li>
-         <li><b>Невидимые утечки.</b> IPv6, DNS, раздельная маршрутизация.</li></ul>`,
-    trust: `<div class="eyebrow">Доверяй, но проверяй</div><h1>Бесплатно. Открытый код.<br><em>Без телеметрии.</em></h1>
-            <div class="chips"><span class="chip ok">Лицензия MIT</span><span class="chip ok">Без разрешений macOS</span><span class="chip ok">Мод не ходит в сеть</span><span class="chip ok">Сборка проверяется gh attestation</span></div>`,
-    cta: `<div class="lockup"><img src="../assets/mark.svg"><span>Cloudex <em>Guard</em></span></div><div class="sub">Порядок в чатах Claude Code — и подключение там, где вы его ждёте.</div>
+           <div class="step"><div class="n">4</div><div><b><code>/clear</code></b><span>проверили, очистили, дальше</span></div></div></div>`,
+    trust: `<div class="eyebrow">Доверяй, но проверяй</div><h1>Бесплатно. Открытый код.<br><em>Не ходит в сеть.</em></h1>
+            <div class="chips"><span class="chip ok">Лицензия MIT</span><span class="chip ok">Без разрешений macOS</span><span class="chip ok">Ни одного сетевого запроса</span><span class="chip ok">Сборка проверяется gh attestation</span></div>`,
+    cta: `<div class="lockup"><img src="${GM}"><span>Cloudex <em>Guard</em></span></div><div class="sub">Заполнение каждого чата Claude Code — видно до того, как кончатся лимиты.</div>
           <div class="url"><span>github.com/</span>trapastnik/cloudex-guard</div><div class="small">medfab-dev.tech/ru · macOS 13+ · бесплатно</div>`,
     d1a: `<div class="eyebrow">Контекст с одного взгляда</div><h2>Заполнение каждого чата — <em>самые полные выше</em></h2>`,
     d1b: `<div class="eyebrow">Ждут вас</div><h2>✋ ждёт разрешения &nbsp;·&nbsp; 💬 закончил ход</h2>`,
     d1c: `<div class="eyebrow">🧹 Одна кнопка</div><h2>Документация + handoff → <em>/clear</em> → тот же чат</h2>`,
-    d2a: `<div class="eyebrow">Страж сети</div><h2>Выберите программы и <em>разрешённые страны</em></h2>`,
+  },
+}, shield: {
+  en: {
+    hook: `<div class="brand"><img src="${SM}">Cloudex Shield</div>
+           <h1>Working through<br>a <em>VPN</em> on your Mac?</h1>
+           <p class="sub">When it drops or switches servers, your apps keep talking from an address you didn't expect.</p>`,
+    p2: `<div class="eyebrow">The problem</div><h1>Your VPN changes —<br>you find out last</h1>
+         <ul class="x"><li><b>Reconnects.</b> The exit jumps to another server or country.</li>
+         <li><b>Wi-Fi switches.</b> The VPN drops, apps carry on without it.</li>
+         <li><b>Invisible leaks.</b> IPv6, DNS, split routing.</li></ul>`,
+    trust: `<div class="eyebrow">Trust, but verify</div><h1>Free. Open source.<br><em>Not a VPN.</em></h1>
+            <div class="chips"><span class="chip ok">MIT license</span><span class="chip ok">Never touches traffic</span><span class="chip ok">No telemetry</span><span class="chip ok">Builds verifiable with gh attestation</span></div>`,
+    cta: `<div class="lockup"><img src="${SM}"><span>Cloudex <em>Shield</em></span></div><div class="sub">VPN dropped? The apps you choose pause until it's back.</div>
+          <div class="url"><span>github.com/</span>trapastnik/cloudex-shield</div><div class="small">medfab-dev.tech · macOS 13+ · free</div>`,
+    d2a: `<div class="eyebrow">Network guard</div><h2>Pick apps and <em>allowed countries</em></h2>`,
+    d2b: `<div class="eyebrow">VPN jumps to 🇧🇷</div><h2><em>❄︎ Paused in seconds</em> — no request leaves</h2>`,
+    d2c: `<div class="eyebrow">Back in 🇺🇸</div><h2>Everything resumes — <em>nothing lost</em></h2>`,
+  },
+  ru: {
+    hook: `<div class="brand"><img src="${SM}">Cloudex Shield</div>
+           <h1>Работаете через<br><em>VPN</em> на Маке?</h1>
+           <p class="sub">Когда он отваливается или меняет сервер, программы продолжают работать с адреса, которого вы не ждали.</p>`,
+    p2: `<div class="eyebrow">Проблема</div><h1>VPN меняется —<br>вы узнаёте последним</h1>
+         <ul class="x"><li><b>Переподключение.</b> Выход прыгает на другой сервер или в другую страну.</li>
+         <li><b>Смена Wi-Fi.</b> VPN отвалился, программы работают без него.</li>
+         <li><b>Невидимые утечки.</b> IPv6, DNS, раздельная маршрутизация.</li></ul>`,
+    trust: `<div class="eyebrow">Доверяй, но проверяй</div><h1>Бесплатно. Открытый код.<br><em>Это не VPN.</em></h1>
+            <div class="chips"><span class="chip ok">Лицензия MIT</span><span class="chip ok">Трафик не трогает</span><span class="chip ok">Без телеметрии</span><span class="chip ok">Сборка проверяется gh attestation</span></div>`,
+    cta: `<div class="lockup"><img src="${SM}"><span>Cloudex <em>Shield</em></span></div><div class="sub">VPN отвалился? Выбранные программы ждут, пока он вернётся.</div>
+          <div class="url"><span>github.com/</span>trapastnik/cloudex-shield</div><div class="small">medfab-dev.tech/ru · macOS 13+ · бесплатно</div>`,
+    d2a: `<div class="eyebrow">Защита</div><h2>Выберите программы и <em>разрешённые страны</em></h2>`,
     d2b: `<div class="eyebrow">VPN прыгнул в 🇧🇷</div><h2><em>❄︎ Пауза за секунды</em> — ни одного запроса</h2>`,
     d2c: `<div class="eyebrow">Снова 🇺🇸</div><h2>Всё продолжается — <em>ничего не потеряно</em></h2>`,
   },
-};
+} };
 const root = document.getElementById('root');
-if (S.startsWith('d')) { root.outerHTML = `<div class="cap">${T[L][S]}</div>`; }
-else { root.innerHTML = T[L][S]; if (S === 'cta') root.classList.add('cta'); }
+if (S.startsWith('d')) { root.outerHTML = `<div class="cap">${T[P][L][S]}</div>`; }
+else { root.innerHTML = T[P][L][S]; if (S === 'cta') root.classList.add('cta'); }
 </script>
 </body></html>

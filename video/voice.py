@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Озвучка сцен видео: video/narration.json → video-out/work/voice/<lang>-<scene>.wav (48 кГц, моно).
+"""Озвучка сцен видео: video/narration.json → video-out/work/voice/<product>-<lang>-<scene>.wav (48 кГц, моно).
 
 Голоса — движки из BMK (tools/voice в BMK/19-21): RU — Silero v5_5_ru (лицензия CC BY-NC 4.0),
 EN — Piper en_US-kristin-medium (модель MIT). Диктор и темп — в narration.json, раздел "_voice".
 Запуск окружением с torch и piper-tts:
-  ~/Desktop/WWWWW/MODS/video-out/voice-venv/bin/python video/voice.py [en|ru ...]
+  ~/Desktop/WWWWW/MODS/video-out/voice-venv/bin/python video/voice.py [guard|shield ...] [en|ru ...]
 Модели: ~/Desktop/WWWWW/MODS/video-out/voice-models/{piper,silero}.
 """
 import array
@@ -47,13 +47,15 @@ def silero(text, cfg):
 
 def main():
     texts = json.loads((HERE / "narration.json").read_text(encoding="utf-8"))
+    products = [a for a in sys.argv[1:] if a in ("guard", "shield")] or ["guard", "shield"]
     langs = [a for a in sys.argv[1:] if a in ("en", "ru")] or ["en", "ru"]
     DEST.mkdir(parents=True, exist_ok=True)
-    for lang in langs:
+    for product in products:
+      for lang in langs:
         cfg = texts.get("_voice", {}).get(lang, {})
-        for scene, text in texts[lang].items():
+        for scene, text in texts[product][lang].items():
             samples, sr = (piper if lang == "en" else silero)(text, cfg)
-            path = DEST / f"{lang}-{scene}.wav"
+            path = DEST / f"{product}-{lang}-{scene}.wav"
             with wave.open(str(path), "wb") as w:
                 w.setnchannels(1)
                 w.setsampwidth(2)

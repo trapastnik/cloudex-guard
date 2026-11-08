@@ -1,5 +1,6 @@
 // Cloudex Guard — строка меню с заполнением контекста всех чатов Claude.
 // Данные пишет мод ~/.claude/mods/cloudex-guard: по файлу на чат в ~/.claude/cloudex-guard.
+// Приложение не ходит в сеть. Страж сети с 1.2 — отдельное приложение Cloudex Shield.
 
 import AppKit
 
@@ -288,20 +289,11 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
     refresh()
     watch()
-    if !isDemo {  // в демо сеть не проверяется и ничего не замораживается
-      NetGuard.shared.onChange = { [weak self] in self?.refresh() }
-      NetGuard.shared.start()
-    }
     let timer = Timer(timeInterval: fallbackSeconds, repeats: true) { [weak self] _ in self?.refresh() }
     timer.tolerance = fallbackSeconds / 2
     RunLoop.main.add(timer, forMode: .common)
     pruneOldFiles()
-    if !isDemo { Setup.onLaunch() }  // демо не ставит мод и автозапуск
-  }
-
-  // Выход через меню приложений, выход из системы, quit от другой программы — отпускаем замороженных.
-  func applicationWillTerminate(_ note: Notification) {
-    if !isDemo { NetGuard.shared.releaseAll() }
+    if !isDemo { Setup.onLaunch(); ShieldNotice.onLaunch() }  // демо не ставит мод и автозапуск
   }
 
   // Старые файлы: просьбы 🧹 старше суток, отметки и состояния чатов, молчащих больше 30 дней,
@@ -344,7 +336,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   // Заголовок в строке меню: цвет и процент самого заполненного активного чата, и сколько красных.
   func refresh() {
     let active = loadChats().filter { -$0.updated.timeIntervalSinceNow < staleDays * 86400 }
-    let title = NSMutableAttributedString(attributedString: networkTitle())
+    let title = NSMutableAttributedString()
     if let top = active.first {
       title.append(dot(top.percent, size: 13))
       title.append(NSAttributedString(string: "\(top.percent)%"))
@@ -376,8 +368,6 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
       menu.addItem(withTitle: t("Connect to Claude Code…", "Подключить к Claude Code…"), action: #selector(connect), keyEquivalent: "").target = self
       menu.addItem(.separator())
     }
-    if isDemo { Demo.addNetworkSection(to: menu) } else { addNetworkSection(to: menu) }
-
     let limits = loadLimits()
     for limit in limits { menu.addItem(limitRow(limit)) }
     if !limits.isEmpty { menu.addItem(.separator()) }
@@ -418,6 +408,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     menu.addItem(.separator())
     menu.addItem(withTitle: t("Open data folder", "Открыть папку данных"), action: #selector(openDir), keyEquivalent: "").target = self
+    menu.addItem(withTitle: t("Also from us: Cloudex Shield — pause apps when your VPN drops ↗", "Ещё от нас: Cloudex Shield — пауза программ, когда VPN отвалился ↗"),
+                 action: #selector(openShield), keyEquivalent: "").target = self
     menu.addItem(withTitle: t("Support Cloudex Guard ♥", "Поддержать Cloudex Guard ♥"), action: #selector(support), keyEquivalent: "").target = self
     menu.addItem(withTitle: t("Quit Cloudex Guard", "Выйти из Cloudex Guard"), action: #selector(quit), keyEquivalent: "q").target = self
   }
@@ -476,6 +468,10 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
   @objc func connect() { Setup.ask() }
 
+  @objc func openShield() {
+    if let url = URL(string: shieldURL) { NSWorkspace.shared.open(url) }
+  }
+
   @objc func support() {
     if let url = URL(string: supportURL) { NSWorkspace.shared.open(url) }
   }
@@ -485,30 +481,17 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     NSWorkspace.shared.open(dataDir)
   }
 
-  @objc func quit() {
-    if !isDemo { NetGuard.shared.releaseAll() }  // выход не должен оставить программы замороженными
-    NSApp.terminate(nil)
-  }
+  @objc func quit() { NSApp.terminate(nil) }
 }
 
 // Место значка по умолчанию — правее, ближе к часам: левые значки при переполненной
 // строке меню уходят под вырез экрана и пропадают. Перетаскивание с ⌘ macOS запоминает
 // под тем же ключом, и тогда эта настройка его не трогает.
 let supportURL = "https://github.com/trapastnik/cloudex-guard#support"
+let shieldURL = "https://medfab-dev.tech/cloudex-shield/"
 let positionKey = "NSStatusItem Preferred Position Cloudex Guard"
 if UserDefaults.standard.object(forKey: positionKey) == nil {
   UserDefaults.standard.set(260.0, forKey: positionKey)
-}
-
-// Служебная проверка из терминала: Cloudex Guard --speedtest
-if CommandLine.arguments.contains("--speedtest") {
-  SpeedTest.shared.onChange = {
-    guard !SpeedTest.shared.isRunning else { return }
-    print(SpeedTest.shared.summary)
-    exit(0)
-  }
-  SpeedTest.shared.run()
-  RunLoop.main.run()
 }
 
 let app = NSApplication.shared

@@ -1,17 +1,15 @@
 <p align="center"><img src="assets/logo.svg" alt="Cloudex Guard" width="440"></p>
 
-<p align="center"><b>Keep your Claude Code chats clean — and your connection where you expect it.</b><br>
+<p align="center"><b>Keep your Claude Code chats clean.</b><br>
 A small, free macOS menu bar app for Claude Code in the Claude desktop app.</p>
 
 <p align="center"><a href="https://github.com/trapastnik/cloudex-guard/releases/latest">Download</a> · <a href="#install">Install</a> · <a href="#your-keys-and-data-stay-yours">Privacy</a> · <a href="README.ru.md">Русский</a> · <a href="https://medfab-dev.tech/cloudex-guard/">Website</a></p>
 
-<p align="center"><img src="assets/demo.gif" alt="Cloudex Guard menu: context of every chat, chats waiting for you, handoff before clearing" width="442"><br><sub>Recorded in the app’s demo mode (<code>app/demo.sh</code>): made-up chats, documentation IP.</sub></p>
+<p align="center"><img src="assets/demo.gif" alt="Cloudex Guard menu: context of every chat, chats waiting for you, handoff before clearing" width="442"><br><sub>Recorded in the app’s demo mode (<code>app/demo.sh</code>): made-up chats.</sub></p>
 
 > Cloudex Guard is an independent open-source project. It is not made, endorsed or supported by Anthropic. Claude and Claude Code are trademarks of Anthropic.
 
-## Two problems, and how we solve them
-
-### 1. A full context window costs you twice
+## A full context window costs you twice
 
 **The problem.** Every message re-reads the whole conversation, so a nearly full chat burns your limits much faster than a fresh one. The model gets slower and loses details from the beginning, and auto-compaction kicks in at an arbitrary moment, squeezing the dialog into a summary — decisions, file paths and open questions get lost.
 
@@ -32,21 +30,7 @@ What the app gives you for this:
 - **Handoff before clearing (🧹)** — one click asks a chat to save everything to the project docs and write a detailed handoff and a short text to paste back after clearing. Always asks you to confirm first.
 - **Recent chats** and **plan limits** — 5-hour and weekly limits with reset times; in the menu bar only above 80%.
 
-### 2. Your connection changes — and you find out last
-
-**The problem.** You work through a corporate VPN or one for privacy. It reconnects, Wi-Fi switches, the exit server moves to another country — and apps keep talking from the new address. AI services watch closely where connections come from: a sudden jump to an unexpected location looks suspicious and can interrupt your work. And IPv6, DNS or split routing can reveal more than you think.
-
-**The fix: watch the address, pause on surprises** — the network guard:
-
-<p align="center"><img src="assets/guard.gif" alt="Network guard: the VPN exit jumps to another country, Claude and ChatGPT are paused, then resume when the address is back" width="600"><br><sub>Demo mode (<code>app/demo.sh net</code>): the VPN exit jumps from 🇺🇸 to 🇧🇷 → ❄︎ Claude and ChatGPT are paused → the address is back, everything resumes. Documentation IP addresses.</sub></p>
-
-- **Your country in the menu bar**, as claude.ai itself sees it, with a warning when your VPN routes some traffic another way or IPv6 bypasses it.
-- **Pause, don't kill.** Pick apps and allowed countries. On an unexpected network the apps — and everything they started; for Claude that includes Claude Code and its MCP servers — are paused, and continue exactly where they stopped once the network is back. Nothing is lost.
-- **How others see us** — what claude.ai, the Claude API, chatgpt.com and others see; IPv6, DNS and time zone checks.
-- **Speed test** — download, upload and latency to Claude and ChatGPT in one menu line.
-- **Safe by design** — system apps and VPN clients can never be paused; quitting Cloudex Guard always resumes everything; after a crash it is restarted within a minute and resumes what it had paused.
-
-Nothing is paused until you pick at least one country and one app. Cloudex Guard doesn't change or route your traffic. The interface is English, or Russian on a Russian system.
+Cloudex Guard does this one thing and makes no network requests at all. The interface is English, or Russian on a Russian system.
 
 ## Install
 
@@ -94,31 +78,36 @@ Then choose **Connect to Claude Code…** in the menu.
 
 **What it asks macOS for:** nothing. No Accessibility, Full Disk Access, Screen Recording, Keychain or Location permission — you will never see such a prompt from it.
 
-**What it does see:** the mod receives from Claude Code only numbers and labels about each chat — how full its context is, plan limits, whether it's busy or waiting for you, its title, sidebar group, folder and link — and writes them to `~/.claude/cloudex-guard` on your Mac. **The mod makes no network requests at all** — the only thing it asks for is the chat's title and link, from the Claude app itself on your Mac. The menu bar app makes only the requests needed to find your public IP, all listed [below](#what-goes-over-the-network). No analytics, no telemetry, no server of ours.
+**What it does see:** the mod receives from Claude Code only numbers and labels about each chat — how full its context is, plan limits, whether it's busy or waiting for you, its title, sidebar group, folder and link — and writes them to `~/.claude/cloudex-guard` on your Mac. The only thing it asks for is the chat's title and link, from the Claude app itself on your Mac. The menu bar app reads those files and nothing else. Files of chats that have been silent for more than 60 days are deleted from that folder at launch. No analytics, no telemetry, no server of ours.
 
 ### Don't take our word for it
 
 There is no paid audit of this project, but everything above can be checked independently:
 
-1. **Read the code.** It is all here — about 1,900 lines of Swift for the app and a single file for the mod.
+1. **Read the code.** It is all here — about 760 lines of Swift for the app and a single file of about 300 lines for the mod.
 2. **Check where the file came from — or skip it entirely.** Since 1.1.1, releases are built by GitHub Actions from this repository's code, and GitHub signs a provenance attestation for every file. One command proves your download was built from this source: `gh attestation verify CloudexGuard.dmg --repo trapastnik/cloudex-guard`. You can also compare its SHA-256 with `SHA256SUMS.txt` (`shasum -a 256 CloudexGuard.dmg`). If you'd rather not trust a binary at all, build the app from this source yourself — it takes a minute (see *From source*).
-3. **Watch the network.** Run a firewall that shows every connection, such as the free open-source [LuLu](https://objective-see.org/products/lulu.html) by Objective-See or [Little Snitch](https://www.obdev.at/products/littlesnitch/). You'll see only the hosts listed below.
+3. **Watch the network.** Run a firewall that shows every connection, such as the free open-source [LuLu](https://objective-see.org/products/lulu.html) by Objective-See or [Little Snitch](https://www.obdev.at/products/littlesnitch/). You'll see no connections from Cloudex Guard at all.
 4. **Check what the mod can do.** Claude Code itself lists every engine call and event a mod uses: `claude plugin validate ~/.claude/mods/cloudex-guard` — you'll see file writes, timers, the usage numbers and one call to the Claude app's own session service (`ccd_session_mgmt`, for the chat title and link), and no network access.
 5. **Scan the file.** Upload the DMG to [VirusTotal](https://www.virustotal.com) to check it with about 70 antivirus engines, or compare its SHA-256 with `SHA256SUMS.txt` in the release.
 
-## What goes over the network
+## No network requests at all
 
-- Every 20 seconds: `claude.ai/cdn-cgi/trace` (plus the site of each guarded app), `api.ipify.org`, `ipv4.icanhazip.com`, `api6.ipify.org`. Every 3 seconds only while apps are paused or about to be, so they resume quickly.
-- If a system proxy is on: one more request to `api.ipify.org` that bypasses the proxy on every check — it shows ipify your address without the VPN.
-- Country of an address: `ipinfo.io`, fallback `api.country.is`; the address is part of the request, the answer is cached until restart.
-- Speed test (on demand): `speed.cloudflare.com` (up to 25 MB down for at most 6 seconds, 1.5 MB up) and four requests each to `claude.ai`, `api.anthropic.com`, `chatgpt.com`.
-- "How others see us" (on demand) adds `api.anthropic.com`, `chatgpt.com`, `1.1.1.1`, `checkip.amazonaws.com`, `v4.ident.me`, `ipv6.icanhazip.com`, `ipinfo.io/json`, your DNS server's address to `ipinfo.io`, and a DNS lookup of `whoami.akamai.net`. With a system proxy on, it deliberately reaches `claude.ai` and `api.ipify.org` around the proxy to show what proxy-unaware apps see — those two sites then see your address without the VPN.
+Neither the menu bar app nor the mod goes online. There is no update check, no IP lookup, no analytics. Everything stays in `~/.claude/cloudex-guard` on your Mac.
+
+A web address opens only when you click a link in the menu — **Also from us: Cloudex Shield** or **Support Cloudex Guard** — and then it opens in your browser, not in the app. Clicking a chat opens it in the Claude app.
+
+To check it yourself, run [LuLu](https://objective-see.org/products/lulu.html) or [Little Snitch](https://www.obdev.at/products/littlesnitch/) and use the app for a while: no connection from `CloudexGuard` will ever show up. You can also block it there completely — nothing changes in how it works.
+
+Until 1.1, Cloudex Guard also had a network guard that checked your public IP. It now lives in a separate app, [Cloudex Shield](#sibling-app-cloudex-shield). If you used it and Cloudex Shield isn't installed yet, Cloudex Guard 1.2 shows a one-time notice with a link.
 
 ## Troubleshooting
 
 - **The icon is gone.** macOS hides menu bar icons that don't fit (behind the camera notch). Check it runs: `pgrep -lx CloudexGuard`. If it does, ⌘-drag it to the right or free some space.
-- **An app looks frozen.** That's a pause. Cloudex Guard resumes it when your address is allowed again, when you quit Cloudex Guard, or right after it restarts. If it isn't running, open it again.
 - **A chat doesn't appear.** It shows up after its next reply; chats that haven't run since you restarted Claude are asleep.
+
+## Sibling app: Cloudex Shield
+
+[Cloudex Shield](https://github.com/trapastnik/cloudex-shield) is a separate free menu bar app from the same author: a per-app kill switch for when your VPN drops, reconnects or switches servers, or Wi-Fi changes. It shows the country your Mac goes out from and pauses the apps you choose until the address is the one you expect, then resumes them exactly where they stopped. It is not a VPN and doesn't change your traffic. It is the network guard that used to be part of Cloudex Guard 1.1; your settings carry over. Website: https://medfab-dev.tech/cloudex-shield/
 
 ## Support
 
@@ -129,10 +118,6 @@ Cloudex Guard is free. If it saves you time, you can support its development:
 - **USDT (Tether), ERC-20 on the Ethereum network only:** `0x2f507c67655ddf3638c83238c71d51defe7b1fec`
 
 Please double-check the network: tokens sent through other networks (BNB Chain, Tron and so on) can be lost. Stars, bug reports and ideas in [Issues](https://github.com/trapastnik/cloudex-guard/issues) help too.
-
-## Credits
-
-The pausing and leak-check approach was inspired by [Kordon](https://github.com/ef1m03/kordon) by Efimov Dev: confirming the address with several services, asking the AI service itself, `SIGSTOP` on the whole process tree, DNS check via `whoami.akamai.net`. Cloudex Guard's code is written from scratch; nothing was copied from Kordon. If you need a full kill switch for Mac, Windows and Linux with a browser extension and Telegram alerts, have a look at Kordon.
 
 ## License
 
