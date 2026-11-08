@@ -21,6 +21,8 @@ A small, free macOS menu bar app for Claude Code in the Claude desktop app.</p>
 3. **Hand off** — the chat writes a detailed handoff and a short text to paste back.
 4. **Clear and keep going in the same chat** — `/clear`, paste the short text: the chat picks up from the docs with a clean context.
 
+Steps 2–3 are one click; step 4 stays with you on purpose. Clearing can't be undone, so you glance at the handoff first — if a decision or a next step is missing, you ask before it's gone. Cloudex Guard never clears a chat by itself. Step by step, with screens: https://medfab-dev.tech/cloudex-guard/#clear
+
 Nothing is lost: the knowledge lives in the docs, not in the context window. Fewer tokens per message, no surprise compaction.
 
 What the app gives you for this:
