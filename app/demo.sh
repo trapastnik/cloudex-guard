@@ -68,5 +68,6 @@ else
   open -g "$HOME/Applications/Cloudex Guard.app"
 fi
 if [ -f "$SHIELD_AGENT" ]; then launchctl bootstrap "gui/$(id -u)" "$SHIELD_AGENT" 2>/dev/null || true; fi
+[ -d "$HOME/Applications/Cloudex Shield.app" ] && open -g "$HOME/Applications/Cloudex Shield.app"
 sleep 2
 pgrep -x CloudexGuard >/dev/null && echo "Настоящий Cloudex Guard снова работает." || echo "Проверьте: Cloudex Guard не запустился — откройте его из ~/Applications."
