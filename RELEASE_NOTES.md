@@ -1,10 +1,12 @@
-**Cloudex Guard** — the project formerly called ContextMeter / Claudex — keeps your Claude Code chats clean and your connection where you expect it.
+**Cloudex Guard** keeps your Claude Code chats clean and your connection where you expect it.
 
-**New in this release**
-- **Install from a DMG**: drag to Applications, open, click **Connect** — the app installs its mod into Claude Code itself. No Terminal needed.
-- New name and icon; English interface (Russian on a Russian system).
-- A clear privacy section in the README: what the app never touches, and five ways to check that yourself.
-- Upgrading from Claudex / ContextMeter: click **Connect** once — old paths are removed from `~/.claude/settings.json`, so the mod never loads twice.
+**New in 1.1.1**
+- **Clear and keep going in the same chat.** The 🧹 request now asks the chat for a short text to paste back into *this* chat after `/clear` — save everything to the docs, write a handoff, clear, continue. No new chat needed.
+- **Built by GitHub, verifiable by you.** This release is built by GitHub Actions from the public source, with a signed build provenance attestation for every file. Check your download:
+  `gh attestation verify CloudexGuard.dmg --repo trapastnik/cloudex-guard`
+- **Demo mode** for screenshots and recordings: `zsh app/demo.sh` runs the real app with made-up chats and a documentation IP address, without touching your data.
+
+**Upgrading**: install the new app over the old one (or run `install.sh` again). The app updates its mod in Claude Code by itself on the next launch; restart Claude to load it.
 
 **Files**: `CloudexGuard.dmg` (recommended), `CloudexGuard-macos.zip`, `cloudex-guard-mod.zip` (used by `install.sh`), `SHA256SUMS.txt`. Universal (Apple Silicon and Intel), macOS 13+. Not notarized by Apple: the first time, allow it in System Settings → Privacy & Security → Open Anyway — see the [README](https://github.com/trapastnik/cloudex-guard#install).
 

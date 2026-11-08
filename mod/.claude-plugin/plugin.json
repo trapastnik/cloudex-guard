@@ -1,6 +1,6 @@
 {
   "name": "cloudex-guard",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cloudex Guard: writes each Claude Code chat's context fill, plan limits and status to ~/.claude/cloudex-guard for the Cloudex Guard menu bar app",
   "license": "MIT",
   "author": {
