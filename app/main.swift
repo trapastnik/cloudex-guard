@@ -3,7 +3,7 @@
 
 import AppKit
 
-let dataDir = FileManager.default.homeDirectoryForCurrentUser
+let dataDir = isDemo ? Demo.dir : FileManager.default.homeDirectoryForCurrentUser
   .appendingPathComponent(".claude/cloudex-guard")
 // Обновление идёт по событию от macOS, когда мод пишет файл; таймер — редкая подстраховка.
 let fallbackSeconds = 60.0
@@ -277,7 +277,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   var stream: FSEventStreamRef?
 
   func applicationDidFinishLaunching(_ note: Notification) {
-    item.autosaveName = "Cloudex Guard"
+    if isDemo { Demo.populate() }
+    item.autosaveName = isDemo ? "Cloudex Guard Demo" : "Cloudex Guard"
     item.menu = NSMenu()
     item.menu?.delegate = self
     // Строки лимитов без действия должны выглядеть обычными, а не серыми.
@@ -285,18 +286,20 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     try? FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
     refresh()
     watch()
-    NetGuard.shared.onChange = { [weak self] in self?.refresh() }
-    NetGuard.shared.start()
+    if !isDemo {  // в демо сеть не проверяется и ничего не замораживается
+      NetGuard.shared.onChange = { [weak self] in self?.refresh() }
+      NetGuard.shared.start()
+    }
     let timer = Timer(timeInterval: fallbackSeconds, repeats: true) { [weak self] _ in self?.refresh() }
     timer.tolerance = fallbackSeconds / 2
     RunLoop.main.add(timer, forMode: .common)
     pruneOldFiles()
-    Setup.onLaunch()
+    if !isDemo { Setup.onLaunch() }  // демо не ставит мод и автозапуск
   }
 
   // Выход через меню приложений, выход из системы, quit от другой программы — отпускаем замороженных.
   func applicationWillTerminate(_ note: Notification) {
-    NetGuard.shared.releaseAll()
+    if !isDemo { NetGuard.shared.releaseAll() }
   }
 
   // Старые служебные файлы: просьбы 🧹 старше суток, отметки и состояния чатов, молчащих больше 30 дней.
@@ -361,11 +364,11 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let active = chats.filter { -$0.updated.timeIntervalSinceNow < staleDays * 86400 }
     let stale = chats.filter { -$0.updated.timeIntervalSinceNow >= staleDays * 86400 }
 
-    if !Setup.isConnected && Setup.modSource != nil {
+    if !isDemo && !Setup.isConnected && Setup.modSource != nil {
       menu.addItem(withTitle: t("Connect to Claude Code…", "Подключить к Claude Code…"), action: #selector(connect), keyEquivalent: "").target = self
       menu.addItem(.separator())
     }
-    addNetworkSection(to: menu)
+    if isDemo { Demo.addNetworkSection(to: menu) } else { addNetworkSection(to: menu) }
 
     let limits = loadLimits()
     for limit in limits { menu.addItem(limitRow(limit)) }
@@ -475,7 +478,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate {
   }
 
   @objc func quit() {
-    NetGuard.shared.releaseAll()  // выход не должен оставить программы замороженными
+    if !isDemo { NetGuard.shared.releaseAll() }  // выход не должен оставить программы замороженными
     NSApp.terminate(nil)
   }
 }
