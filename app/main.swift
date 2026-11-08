@@ -14,8 +14,8 @@ let aliveDir = dataDir.appendingPathComponent("alive")
 let aliveSeconds = 150.0
 // Текст просьбы — тот же, что мод отправляет сам (CLEANUP_TEXT в register.tsx).
 let cleanupText = t(
-  "Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text to paste into a new chat — after that we will clear this chat.",
-  "У тебя достаточно большой контекст, когда сможешь, пожалуйста сохрани все подробно в документации напиши подробный Handoff и короткий текст для вставки в новый чат после чего будем тебя чистить.")
+  "Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text I can paste back into this chat after clearing it — after that we will clear this chat.",
+  "У тебя достаточно большой контекст, когда сможешь, пожалуйста сохрани все подробно в документации напиши подробный Handoff и короткий текст, который я вставлю в этот же чат после очистки, после чего будем тебя чистить.")
 
 func isAlive(_ id: String) -> Bool {
   guard let text = try? String(contentsOf: aliveDir.appendingPathComponent(id), encoding: .utf8),
@@ -252,7 +252,7 @@ final class RowView: NSView {
       let alert = NSAlert()
       alert.messageText = t("Prepare “\(chat.title)” for clearing?", "Подготовить «\(chat.title)» к очистке?")
       alert.informativeText = isAwake
-        ? t("The chat will be asked to save everything to the docs, write a detailed handoff and a short text for a new chat. The message is sent when the chat is free.", "Чат получит просьбу сохранить всё в документации, написать подробный handoff и короткий текст для нового чата. Сообщение уйдёт, когда чат освободится.")
+        ? t("The chat will be asked to save everything to the docs, write a detailed handoff and a short text to paste back after clearing. The message is sent when the chat is free.", "Чат получит просьбу сохранить всё в документации, написать подробный handoff и короткий текст для вставки после очистки. Сообщение уйдёт, когда чат освободится.")
         : t("The chat is asleep and won’t get the request by itself. It will open with the text on your clipboard — just paste (⌘V) and press Enter.", "Чат спит, сам он просьбу не получит. Чат откроется, а текст просьбы окажется в буфере обмена — останется вставить (⌘V) и нажать Enter.")
       alert.addButton(withTitle: isAwake ? t("Send", "Отправить") : t("Open and copy", "Открыть и скопировать"))
       alert.addButton(withTitle: t("Cancel", "Отмена"))

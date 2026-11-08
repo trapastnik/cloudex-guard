@@ -9,20 +9,32 @@ A small, free macOS menu bar app for Claude Code in the Claude desktop app.</p>
 
 > Cloudex Guard is an independent open-source project. It is not made, endorsed or supported by Anthropic. Claude and Claude Code are trademarks of Anthropic.
 
-## What it does
+## Two problems, and how we solve them
 
-### Chat hygiene
+### 1. A full context window costs you twice
 
-If you run many Claude Code chats in parallel, they quietly fill up. A chat at 80% context gets slower, forgets earlier details and eventually compacts at the worst moment. Cloudex Guard shows every chat's fill at a glance, so you clear the right chat at the right time — after it has saved its state.
+**The problem.** Every message re-reads the whole conversation, so a nearly full chat burns your limits much faster than a fresh one. The model gets slower and loses details from the beginning, and auto-compaction kicks in at an arbitrary moment, squeezing the dialog into a summary — decisions, file paths and open questions get lost.
+
+**The fix: save, hand off, clear, continue.**
+1. **See it coming** — every chat's fill in the menu bar.
+2. **🧹 Save everything** — one click asks the chat to write all its state to the project docs.
+3. **Hand off** — the chat writes a detailed handoff and a short text to paste back.
+4. **Clear and keep going in the same chat** — `/clear`, paste the short text: the chat picks up from the docs with a clean context.
+
+Nothing is lost: the knowledge lives in the docs, not in the context window. Fewer tokens per message, no surprise compaction.
+
+What the app gives you for this:
 
 - **Context at a glance** — a colored dot and the fullest chat's percentage in the menu bar; every chat sorted by fill in the menu, with tokens, group and time of the last reply. Click a row to open the chat.
 - **Waiting for you** — ✋ chats blocked on your permission or answer, 💬 chats that just finished their turn. Shown only when someone is waiting.
-- **Handoff before clearing (🧹)** — one click asks a chat to save everything to the project docs and write a detailed handoff and a short starter for a new chat. Always asks you to confirm first.
+- **Handoff before clearing (🧹)** — one click asks a chat to save everything to the project docs and write a detailed handoff and a short text to paste back after clearing. Always asks you to confirm first.
 - **Recent chats** and **plan limits** — 5-hour and weekly limits with reset times; in the menu bar only above 80%.
 
-### Network guard
+### 2. Your connection changes — and you find out last
 
-Many people reach AI services through a VPN — a corporate one, or just for privacy. When it reconnects, Wi-Fi changes or the exit server moves to another country, apps keep working from the new address before you notice. Cloudex Guard can pause the apps you choose until your connection is back where you expect it.
+**The problem.** You work through a corporate VPN or one for privacy. It reconnects, Wi-Fi switches, the exit server moves to another country — and apps keep talking from the new address. AI services watch closely where connections come from: a sudden jump to an unexpected location looks suspicious and can interrupt your work. And IPv6, DNS or split routing can reveal more than you think.
+
+**The fix: watch the address, pause on surprises** — the network guard:
 
 - **Your country in the menu bar**, as claude.ai itself sees it, with a warning when your VPN routes some traffic another way or IPv6 bypasses it.
 - **Pause, don't kill.** Pick apps and allowed countries. On an unexpected network the apps — and everything they started; for Claude that includes Claude Code and its MCP servers — are paused, and continue exactly where they stopped once the network is back. Nothing is lost.

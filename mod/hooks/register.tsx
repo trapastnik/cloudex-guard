@@ -12,7 +12,7 @@ const POLL_MS = 10000
 const REQUEST_TTL_MS = 10 * 60 * 1000
 // Текст просьбы приходит в запросе (на языке интерфейса); этот — если его там нет.
 const CLEANUP_TEXT =
-  'Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text to paste into a new chat — after that we will clear this chat.'
+  'Your context is getting large. When you can, please save everything in detail to the project docs, write a detailed handoff and a short text I can paste back into this chat after clearing it — after that we will clear this chat.'
 // Отметка «чат запущен»: спящему чату просьбу 🧹 приходится вставлять руками.
 const BEAT_MS = 60000
 
