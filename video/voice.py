@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Озвучка сцен видео: video/narration.json → video-out/work/voice/<lang>-<scene>.wav (48 кГц, моно).
 
-Голоса — те же, что выбраны для BMK (tools/voice в BMK/19-21): RU — Silero v5_5_ru «aidar»
-(лицензия CC BY-NC 4.0), EN — Piper en_US-kristin-medium (модель MIT).
+Голоса — движки из BMK (tools/voice в BMK/19-21): RU — Silero v5_5_ru (лицензия CC BY-NC 4.0),
+EN — Piper en_US-kristin-medium (модель MIT). Диктор и темп — в narration.json, раздел "_voice".
 Запуск окружением с torch и piper-tts:
   ~/Desktop/WWWWW/MODS/video-out/voice-venv/bin/python video/voice.py [en|ru ...]
 Модели: ~/Desktop/WWWWW/MODS/video-out/voice-models/{piper,silero}.
@@ -20,24 +20,26 @@ DEST = OUT / "work" / "voice"
 SR = 48000
 
 
-def piper(text):
+def piper(text, cfg):
     from piper import PiperVoice, SynthesisConfig
     if not hasattr(piper, "v"):
         piper.v = PiperVoice.load(str(MODELS / "piper" / "en_US-kristin-medium.onnx"))
     a, sr = array.array("h"), 22050
-    for chunk in piper.v.synthesize(text, syn_config=SynthesisConfig(length_scale=0.96)):
+    for chunk in piper.v.synthesize(text, syn_config=SynthesisConfig(**cfg)):
         a.frombytes(chunk.audio_int16_bytes)
         sr = chunk.sample_rate
     return a, sr
 
 
-def silero(text):
+def silero(text, cfg):
     import torch
     if not hasattr(silero, "m"):
         imp = torch.package.PackageImporter(str(MODELS / "silero" / "v5_5_ru.pt"))
         silero.m = imp.load_pickle("tts_models", "model")
         silero.m.to(torch.device("cpu"))
-    audio = silero.m.apply_tts(text=text, speaker="aidar", sample_rate=SR, put_accent=True, put_yo=True)
+    ssml = f'<speak><prosody rate="{cfg.get("rate", "medium")}">{text}</prosody></speak>'
+    audio = silero.m.apply_tts(ssml_text=ssml, speaker=cfg.get("speaker", "aidar"), sample_rate=SR,
+                               put_accent=True, put_yo=True)
     a = array.array("h")
     a.frombytes((audio.clamp(-1, 1) * 32767).round().to(torch.int16).numpy().tobytes())
     return a, SR
@@ -48,8 +50,9 @@ def main():
     langs = [a for a in sys.argv[1:] if a in ("en", "ru")] or ["en", "ru"]
     DEST.mkdir(parents=True, exist_ok=True)
     for lang in langs:
+        cfg = texts.get("_voice", {}).get(lang, {})
         for scene, text in texts[lang].items():
-            samples, sr = (piper if lang == "en" else silero)(text)
+            samples, sr = (piper if lang == "en" else silero)(text, cfg)
             path = DEST / f"{lang}-{scene}.wav"
             with wave.open(str(path), "wb") as w:
                 w.setnchannels(1)

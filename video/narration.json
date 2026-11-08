@@ -1,31 +1,35 @@
 {
   "_": "Тексты озвучки по сценам (ключи — сцены из video/scenes.html). Для русского голоса Silero латиница записана русскими буквами — иначе он её пропускает.",
+  "_voice": {
+    "ru": {"speaker": "xenia", "rate": "medium"},
+    "en": {"length_scale": 0.86, "noise_scale": 0.75, "noise_w_scale": 0.9}
+  },
   "en": {
-    "hook": "Running ten or more Claude Code chats at once? Here are two problems you hit every day, and a small free Mac app that fixes both.",
-    "p1": "Problem one: a full context window costs you twice. Every message re-reads the whole chat, so your limits melt. The model slows down, and auto-compaction kicks in at the worst moment, losing decisions and file paths.",
-    "fix1": "The fix: save, hand off, clear, continue. Save everything to the project docs, write a handoff, run slash clear, and keep going in the same chat.",
-    "d1a": "Cloudex Guard shows every chat's context in your menu bar, fullest first.",
-    "d1b": "Chats waiting for your permission or answer are marked, so none of them sits idle.",
-    "d1c": "And one click on the broom asks a chat to save everything and write its handoff.",
-    "p2": "Problem two: your VPN changes behind your back. It reconnects, the exit jumps to another country, and AI services watch closely where connections come from.",
+    "hook": "Ten Claude Code chats at once? Here are two daily headaches, and one tiny free Mac app that fixes both!",
+    "p1": "Problem one: a full context window. Every message re-reads the entire chat, so your limits melt. The model slows down, and then auto-compaction hits at the worst possible moment!",
+    "fix1": "The fix? Save everything to the docs. Write a handoff. Slash clear. And keep going, in the same chat!",
+    "d1a": "Cloudex Guard puts every chat's context right in your menu bar, fullest first.",
+    "d1b": "A chat waiting for your OK? You'll see it instantly.",
+    "d1c": "One click on the broom, and the chat saves everything and writes its handoff!",
+    "p2": "Problem two: your VPN changes behind your back. It reconnects, jumps to another country, and AI services notice.",
     "d2a": "Pick the apps to guard, and the countries you allow.",
-    "d2b": "If the address jumps somewhere unexpected, those apps are frozen within seconds. Not a single request leaves.",
-    "d2c": "When the address is back, everything resumes exactly where it stopped.",
-    "trust": "It's free, open source, with no telemetry. And every release is built by GitHub, so you can verify it yourself.",
-    "cta": "Cloudex Guard. Find it on GitHub: trapastnik, slash, cloudex guard."
+    "d2b": "Address jumps? Those apps freeze in seconds. Not a single request leaks!",
+    "d2c": "Address back? Everything picks up exactly where it stopped.",
+    "trust": "Free. Open source. Zero telemetry. And every build is verifiable!",
+    "cta": "Cloudex Guard. Grab it on GitHub, link below!"
   },
   "ru": {
-    "hook": "Ведёте десять и больше чатов Клод Код одновременно? Вот две проблемы, с которыми сталкиваешься каждый день, и маленькое бесплатное приложение для Мака, которое решает обе.",
-    "p1": "Проблема первая: переполненный контекст обходится дважды. Каждое сообщение заново читает весь чат, и лимиты тают. Модель тормозит, а автосжатие срабатывает в самый неудобный момент и теряет решения и пути к файлам.",
-    "fix1": "Решение: сохранить, передать, очистить, продолжить. Всё сохраняем в документацию проекта, пишем хэндофф, команда слэш клир, и работа продолжается в том же чате.",
+    "hook": "Десять чатов Клод Код одновременно? Вот две ежедневные головные боли, и маленькое бесплатное приложение для Мака, которое лечит обе!",
+    "p1": "Проблема номер один: переполненный контекст. Каждое сообщение перечитывает весь чат, и лимиты тают на глазах. Модель тупит, а потом автосжатие бьёт в самый неподходящий момент!",
+    "fix1": "Решение? Всё сохраняем в документацию. Пишем хэндофф. Слэш клир. И едем дальше, в том же чате!",
     "d1a": "Клаудекс Гард показывает заполнение каждого чата прямо в строке меню, самые полные сверху.",
-    "d1b": "Чаты, которые ждут вашего разрешения или ответа, помечены, и ни один не простаивает.",
-    "d1c": "А одна кнопка с метлой просит чат всё сохранить и написать хэндофф.",
-    "p2": "Проблема вторая: ви-пи-эн меняется незаметно. Он переподключается, выход прыгает в другую страну, а ИИ-сервисы строго следят, откуда приходят подключения.",
-    "d2a": "Выберите программы, которые нужно защищать, и разрешённые страны.",
-    "d2b": "Если адрес прыгнул туда, где его не ждали, эти программы замирают за секунды. С чужого адреса не уходит ни одного запроса.",
-    "d2c": "Адрес вернулся, и всё продолжается ровно с того же места.",
-    "trust": "Это бесплатно, с открытым кодом и без телеметрии. А каждый релиз собирает гитхаб, так что это можно проверить самому.",
-    "cta": "Клаудекс Гард. Ищите на гитхабе: трапастник, клаудекс гард."
+    "d1b": "Чат ждёт вашего ответа? Вы увидите это сразу.",
+    "d1c": "Одно нажатие на метлу, и чат всё сохраняет и пишет хэндофф!",
+    "p2": "Проблема номер два: ви-пи-эн меняется у вас за спиной. Переподключился, прыгнул в другую страну, и ИИ-сервисы это замечают.",
+    "d2a": "Выберите программы для защиты и разрешённые страны.",
+    "d2b": "Адрес прыгнул? Программы замирают за секунды. Ни одного запроса с чужого адреса!",
+    "d2c": "Адрес вернулся? Всё продолжается ровно с того же места.",
+    "trust": "Бесплатно. Открытый код. Ноль телеметрии. И каждую сборку можно проверить!",
+    "cta": "Клаудекс Гард. Ссылка на гитхаб в описании!"
   }
 }

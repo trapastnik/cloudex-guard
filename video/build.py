@@ -28,22 +28,24 @@ PLACE = {
 }
 # Сюжет: титры (сцена, секунды) и куски записей (кадр с подписью, файл, начало, конец).
 STORY = [
-    ("card", "hook", 4.0),
-    ("card", "p1", 6.5),
-    ("card", "fix1", 6.0),
+    ("card", "hook", 3.0),
+    ("card", "p1", 4.0),
+    ("card", "fix1", 4.0),
     ("demo", "d1a", "demo", 0.0, 4.5),
     ("demo", "d1b", "demo", 4.5, 10.9),
     ("demo", "d1c", "demo", 10.9, 15.4),
-    ("card", "p2", 6.0),
+    ("card", "p2", 4.0),
     ("demo", "d2a", "guard", 0.0, 4.1),
     ("demo", "d2b", "guard", 4.1, 9.05),
     ("demo", "d2c", "guard", 9.05, 13.95),
-    ("card", "trust", 4.5),
-    ("card", "cta", 5.0),
+    ("card", "trust", 3.0),
+    ("card", "cta", 4.0),
 ]
-FADE = 0.3
-VOICE_DELAY = 0.35   # реплика начинается чуть позже кадра
-VOICE_TAIL = 0.6     # и после неё короткая пауза
+FADE = 0.18
+DEMO_SPEED = 1.25   # записи демо чуть быстрее — в ритм речи
+VOICE_DELAY = 0.12   # реплика начинается почти сразу
+VOICE_TAIL = 0.28    # и после неё короткая пауза
+ZOOM = 0.035         # наезд камеры на титрах за сцену
 
 
 def voice(lang, scene):
@@ -66,12 +68,16 @@ def run(args):
     subprocess.run(args, check=True)
 
 
+SIZE_OF = {}
+
+
 def shot(scene, lang, fmt):
     w, h = SIZE[fmt]
     png = WORK / f"{lang}-{fmt}-{scene}.png"
     run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-color-profile=srgb",
          "--allow-file-access-from-files", f"--window-size={w},{h}", f"--screenshot={png}",
          f"{SCENES.as_uri()}?s={scene}&l={lang}&f={fmt}"])
+    SIZE_OF[str(png)] = (w, h)
     return png
 
 
@@ -82,7 +88,9 @@ def fades(dur):
 def card(png, dur, out, wav=None):
     ain, af = audio_args(wav, dur)
     run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-t", f"{dur}", "-i", str(png), *ain,
-         "-filter_complex", f"[0:v]fps={FPS},format=yuv420p,{fades(dur)}[v];" + af.format(n=1),
+         "-filter_complex",
+         f"[0:v]fps={FPS},scale=w='trunc(iw*(1+{ZOOM}*t/{dur:.3f})/2)*2':h=-2:eval=frame,"
+         f"crop={SIZE_OF[str(png)][0]}:{SIZE_OF[str(png)][1]},format=yuv420p,{fades(dur)}[v];" + af.format(n=1),
          "-map", "[v]", "-map", "[a]", "-t", f"{dur}",
          "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
          str(out)])
@@ -90,7 +98,8 @@ def card(png, dur, out, wav=None):
 
 def demo(png, clip, t0, t1, place, out, first, last, wav=None, dur=None):
     x, y, w, h = place
-    span = t1 - t0
+    src_span = t1 - t0
+    span = src_span / DEMO_SPEED
     dur = max(span, dur or 0)
     hold = dur - span  # реплика длиннее куска записи — держим последний кадр
     vf = []
@@ -102,9 +111,9 @@ def demo(png, clip, t0, t1, place, out, first, last, wav=None, dur=None):
     ain, af = audio_args(wav, dur)
     pad = f",tpad=stop_mode=clone:stop_duration={hold:.3f}" if hold > 0 else ""
     run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-t", f"{dur}", "-i", str(png),
-         "-ss", f"{t0}", "-t", f"{span}", "-i", str(ROOT / "assets" / f"{clip}.mp4"), *ain,
+         "-ss", f"{t0}", "-t", f"{src_span}", "-i", str(ROOT / "assets" / f"{clip}.mp4"), *ain,
          "-filter_complex",
-         f"[1:v]setpts=PTS-STARTPTS,fps={FPS},scale={w}:{h}:flags=lanczos{pad}[c];"
+         f"[1:v]setpts=(PTS-STARTPTS)/{DEMO_SPEED},fps={FPS},scale={w}:{h}:flags=lanczos{pad}[c];"
          f"[0:v]fps={FPS}[b];[b][c]overlay={x}:{y}:eof_action=repeat,format=yuv420p{tail}[v];" + af.format(n=2),
          "-map", "[v]", "-map", "[a]", "-t", f"{dur}",
          "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
