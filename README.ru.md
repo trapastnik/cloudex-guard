@@ -5,7 +5,7 @@
 
 <p align="center"><a href="https://github.com/trapastnik/cloudex-guard/releases/latest">Скачать</a> · <a href="#установка">Установка</a> · <a href="#ваши-ключи-и-данные-остаются-вашими">Приватность</a> · <a href="README.md">English</a> · <a href="https://medfab-dev.tech/ru/cloudex-guard/">Сайт</a></p>
 
-<p align="center"><img src="assets/demo.gif" alt="Меню Cloudex Guard: контекст каждого чата, кто ждёт вас, handoff перед очисткой" width="442"><br><sub>Записано в демо-режиме приложения (<code>app/demo.sh</code>): выдуманные чаты.</sub></p>
+<p align="center"><img src="assets/demo.gif" alt="Меню Cloudex Guard: контекст каждого чата, кто ждёт вас, handoff перед очисткой" width="490"><br><sub>Записано в демо-режиме приложения (<code>app/demo.sh</code>): выдуманные чаты.</sub></p>
 
 > Cloudex Guard — независимый проект с открытым кодом. Anthropic его не делала, не одобряла и не поддерживает. Claude и Claude Code — товарные знаки Anthropic.
 
